@@ -11,10 +11,11 @@ from typing import Any
 
 from flightledger.audit.lineage import AuditStore
 from flightledger.db.repositories import DagRunRepository, TaskRunRepository, get_storage_backend, reset_memory_backend
+from flightledger.bus.in_memory import InMemoryBus
 from flightledger.matching.coupon_matcher import CouponMatcher
 from flightledger.models.canonical import CanonicalEventType
 from flightledger.orchestrator.dag import DAG, DAGRunner, Task
-from flightledger.pipeline import SourceChannel, ingest_demo
+from flightledger.pipeline import SOURCE_CHANNELS, SourceChannel, ingest_demo
 from flightledger.recon.reconciliation import ReconciliationEngine, ReconSummary
 from flightledger.settlement.engine import SettlementEngine
 from flightledger.stores.ticket_lifecycle import TicketLifecycleStore, TicketState
@@ -63,6 +64,8 @@ class FlightLedgerRuntime:
 
     def ensure_seeded(self) -> None:
         if self._seeded:
+            return
+        if get_storage_backend().value == "supabase" and self._hydrate_from_existing_supabase():
             return
         self.refresh(force=False)
 
@@ -221,6 +224,55 @@ class FlightLedgerRuntime:
             )
 
         self._last_bus, self._last_channels = ingest_demo(self.data_dir, on_event=on_event)
+
+    def _hydrate_from_existing_supabase(self) -> bool:
+        try:
+            events = self.ticket_store.all_events()
+        except Exception:
+            return False
+        if not events:
+            return False
+
+        bus = InMemoryBus()
+        for event in events:
+            bus.publish(event)
+        self._last_bus = bus
+
+        # Raw source payloads are unavailable once data already lives in Supabase.
+        # Keep channel metadata without payload text for dashboard continuity.
+        self._last_channels = [
+            {
+                "channel_id": source.channel_id,
+                "name": source.name,
+                "protocol": source.protocol,
+                "format": source.data_format,
+                "file_name": source.filename,
+                "record_count": 0,
+                "raw_payload": "Loaded from persisted Supabase records (raw source payload not rehydrated).",
+            }
+            for source in SOURCE_CHANNELS
+        ]
+
+        recon_rows = self.recon.repository.all_rows()
+        total_matched = len([row for row in recon_rows if row.get("status") == "matched"])
+        breaks = [row for row in recon_rows if row.get("status") == "break"]
+        breaks_by_type: dict[str, int] = {}
+        breaks_by_severity: dict[str, int] = {}
+        for row in breaks:
+            break_type = row.get("break_type")
+            severity = row.get("severity")
+            if break_type:
+                breaks_by_type[break_type] = breaks_by_type.get(break_type, 0) + 1
+            if severity:
+                breaks_by_severity[severity] = breaks_by_severity.get(severity, 0) + 1
+        self._last_recon_summary = ReconSummary(
+            total_matched=total_matched,
+            total_breaks=len(breaks),
+            breaks_by_type=breaks_by_type,
+            breaks_by_severity=breaks_by_severity,
+        )
+        self._seeded = True
+        return True
 
     def _run_matching_recon(self) -> None:
         matching = self.matcher.run_matching()
