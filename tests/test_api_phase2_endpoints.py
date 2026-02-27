@@ -63,3 +63,5 @@ def test_phase2_endpoints_smoke() -> None:
     assert walkthroughs.status_code == 200
     walkthrough_rows = walkthroughs.json()
     assert len(walkthrough_rows) == 6
+    assert "purchase_summary" in walkthrough_rows[0]
+    assert "result_meaning" in walkthrough_rows[0]

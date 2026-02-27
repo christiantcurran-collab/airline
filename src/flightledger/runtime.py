@@ -52,11 +52,13 @@ class FlightLedgerRuntime:
                 self.dag_run_repo = DagRunRepository()
                 self.task_run_repo = TaskRunRepository()
 
-            self.audit.reset()
-            self.ticket_store.reset()
-            self.matcher.reset()
-            self.recon.reset()
+            # Reset in dependency order for Supabase FK safety.
+            # coupon_matches references ticket_events, so matcher must reset before ticket_store.
             self.settlement.reset()
+            self.recon.reset()
+            self.matcher.reset()
+            self.ticket_store.reset()
+            self.audit.reset()
             self._seeded = False
             self._ingest_pipeline()
             self._run_matching_recon()
@@ -298,6 +300,7 @@ class FlightLedgerRuntime:
                     "passenger_name": passenger_name,
                     "tickets": tickets,
                     "sales_channels": sales_channels,
+                    "purchase_summary": self._build_purchase_summary(itinerary),
                     "itinerary": itinerary,
                     "steps": {
                         "ingestion": {
@@ -327,6 +330,13 @@ class FlightLedgerRuntime:
                         },
                     },
                     "narrative": narrative,
+                    "result_meaning": self._build_result_meaning(
+                        matched=int(matching_counter.get("matched", 0)),
+                        unmatched_issued=int(matching_counter.get("unmatched_issued", 0)),
+                        unmatched_flown=int(matching_counter.get("unmatched_flown", 0)),
+                        breaks=len(recon_breaks),
+                        settlement_statuses=dict(settlement_counter),
+                    ),
                 }
             )
         return walkthroughs
@@ -504,3 +514,72 @@ class FlightLedgerRuntime:
                 f"{unmatched_flown} unmatched flown; review timing/data gaps."
             )
         return f"Clean flow: {matched} coupon(s) matched, no recon breaks, {settlements} settlement item(s) progressed."
+
+    @staticmethod
+    def _build_purchase_summary(itinerary: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        by_ticket: dict[str, dict[str, Any]] = {}
+        for leg in itinerary:
+            ticket_number = str(leg.get("ticket_number"))
+            row = by_ticket.setdefault(
+                ticket_number,
+                {
+                    "ticket_number": ticket_number,
+                    "sales_channel": leg.get("sales_channel"),
+                    "pnr": leg.get("pnr"),
+                    "coupons": 0,
+                    "total_paid": Decimal("0"),
+                    "currency": leg.get("currency"),
+                    "journey_legs": [],
+                },
+            )
+            row["coupons"] += 1
+            amount = leg.get("gross_amount")
+            if amount is not None:
+                row["total_paid"] += Decimal(str(amount))
+            route = f"{leg.get('origin') or '---'}-{leg.get('destination') or '---'}"
+            row["journey_legs"].append(route)
+
+        summary: list[dict[str, Any]] = []
+        for ticket_number in sorted(by_ticket.keys()):
+            row = by_ticket[ticket_number]
+            summary.append(
+                {
+                    "ticket_number": row["ticket_number"],
+                    "pnr": row["pnr"],
+                    "sales_channel": row["sales_channel"],
+                    "coupons": row["coupons"],
+                    "total_paid": _decimal_to_float(row["total_paid"]),
+                    "currency": row["currency"],
+                    "journey": " -> ".join(row["journey_legs"]),
+                }
+            )
+        return summary
+
+    @staticmethod
+    def _build_result_meaning(
+        matched: int,
+        unmatched_issued: int,
+        unmatched_flown: int,
+        breaks: int,
+        settlement_statuses: dict[str, int],
+    ) -> list[str]:
+        lines = [f"Matching: {matched} matched coupon(s)."]
+        if unmatched_issued > 0:
+            lines.append(f"Unmatched issued ({unmatched_issued}) means sold but no flown event yet (timing/no-show/capture gap).")
+        if unmatched_flown > 0:
+            lines.append(f"Unmatched flown ({unmatched_flown}) means flown event arrived without a matching issued coupon (data integrity issue).")
+        if breaks > 0:
+            lines.append(f"Reconciliation breaks ({breaks}) require investigation before close.")
+        else:
+            lines.append("Reconciliation clean: no breaks on this passenger's tickets.")
+
+        reconciled = int(settlement_statuses.get("reconciled", 0))
+        compensated = int(settlement_statuses.get("compensated", 0))
+        disputed = int(settlement_statuses.get("disputed", 0))
+        if reconciled > 0:
+            lines.append(f"Settlements reconciled: {reconciled} item(s) confirmed by counterparties.")
+        if compensated > 0 or disputed > 0:
+            lines.append(
+                f"Settlement exceptions: {disputed} disputed and {compensated} compensated; compensated means rollback after dispute."
+            )
+        return lines

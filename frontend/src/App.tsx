@@ -120,6 +120,15 @@ type PassengerWalkthrough = {
   passenger_name: string
   tickets: string[]
   sales_channels: string[]
+  purchase_summary: {
+    ticket_number: string
+    pnr: string | null
+    sales_channel: string
+    coupons: number
+    total_paid: number | null
+    currency: string | null
+    journey: string
+  }[]
   itinerary: {
     ticket_number: string
     pnr: string | null
@@ -170,6 +179,7 @@ type PassengerWalkthrough = {
     }
   }
   narrative: string
+  result_meaning: string[]
 }
 
 type TabKey =
@@ -613,6 +623,15 @@ function App() {
                 <p className="event-meta">
                   Channels: {flow.sales_channels.join(', ')} | {flow.narrative}
                 </p>
+                <div className="purchase-summary">
+                  <h3>What They Bought</h3>
+                  {flow.purchase_summary.map((purchase) => (
+                    <p key={purchase.ticket_number}>
+                      {purchase.ticket_number} ({purchase.pnr ?? '-'}) via {purchase.sales_channel}: {purchase.coupons} coupon(s),{' '}
+                      {purchase.currency ?? '-'} {purchase.total_paid !== null ? purchase.total_paid.toFixed(2) : '-'} for {purchase.journey}
+                    </p>
+                  ))}
+                </div>
                 <div className="legs-grid">
                   {flow.itinerary.map((leg) => (
                     <div key={`${leg.ticket_number}-${leg.coupon_number}`} className="leg-card">
@@ -656,6 +675,12 @@ function App() {
                       {flow.steps.settlement.total} settlement items, {flow.steps.audit.records} audit records.
                     </p>
                   </div>
+                </div>
+                <div className="meaning-block">
+                  <h3>What The Results Mean</h3>
+                  {flow.result_meaning.map((line, idx) => (
+                    <p key={`${flow.passenger_name}-meaning-${idx}`}>{line}</p>
+                  ))}
                 </div>
               </article>
             ))}
