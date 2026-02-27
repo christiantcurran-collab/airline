@@ -131,3 +131,8 @@ def get_settlements(status: str | None = None) -> list[dict[str, Any]]:
 @app.get("/api/settlements/{settlement_id}/saga")
 def get_settlement_saga(settlement_id: str) -> list[dict[str, Any]]:
     return runtime.settlement_saga(settlement_id)
+
+
+@app.get("/api/walkthroughs")
+def get_passenger_walkthroughs() -> list[dict[str, Any]]:
+    return runtime.passenger_walkthroughs()

@@ -59,3 +59,7 @@ def test_phase2_endpoints_smoke() -> None:
         saga = client.get(f"/api/settlements/{settlement_rows[0]['id']}/saga")
         assert saga.status_code == 200
 
+    walkthroughs = client.get("/api/walkthroughs")
+    assert walkthroughs.status_code == 200
+    walkthrough_rows = walkthroughs.json()
+    assert len(walkthrough_rows) == 6

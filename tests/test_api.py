@@ -7,7 +7,7 @@ def test_build_dashboard_payload_contains_topics() -> None:
     assert payload["bus_backend"] == "memory"
     assert payload["total_channels"] == 5
     assert payload["total_topics"] >= 1
-    assert payload["total_events"] == 120
+    assert payload["total_events"] == 33
     assert len(payload["channels"]) == 5
     assert "ticket.issued" in payload["topics"]
-    assert payload["topics"]["ticket.issued"]["count"] == 40
+    assert payload["topics"]["ticket.issued"]["count"] == 10

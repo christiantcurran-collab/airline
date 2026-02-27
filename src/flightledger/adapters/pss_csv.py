@@ -34,8 +34,10 @@ class PssCsvAdapter(Adapter):
                     currency=row.get("currency"),
                     gross_amount=gross,
                     net_amount=net,
-                    metadata={"source_record_type": "pss_csv"},
+                    metadata={
+                        "source_record_type": "pss_csv",
+                        "sales_channel": row.get("sales_channel"),
+                    },
                 )
             )
         return events
-

@@ -9,6 +9,7 @@ type CanonicalEvent = {
   event_type: string
   ticket_number: string
   coupon_number: number | null
+  passenger_name?: string | null
   origin: string | null
   destination: string | null
   flight_number: string | null
@@ -115,9 +116,66 @@ type SettlementSaga = {
   timestamp: string
 }
 
+type PassengerWalkthrough = {
+  passenger_name: string
+  tickets: string[]
+  sales_channels: string[]
+  itinerary: {
+    ticket_number: string
+    pnr: string | null
+    coupon_number: number | null
+    flight_date: string | null
+    flight_number: string | null
+    origin: string | null
+    destination: string | null
+    marketing_carrier: string | null
+    operating_carrier: string | null
+    gross_amount: number | null
+    currency: string | null
+    sales_channel: string
+    match_status: string
+    recon_status: string
+    recon_break_type: string | null
+  }[]
+  steps: {
+    ingestion: {
+      issued_coupons: number
+      source_events: Record<string, number>
+    }
+    lifecycle: {
+      ticket_states: {
+        ticket_number: string
+        status: string
+        event_count: number
+        last_event_type: string | null
+      }[]
+    }
+    matching: {
+      matched: number
+      unmatched_issued: number
+      unmatched_flown: number
+      suspense: number
+    }
+    reconciliation: {
+      matched: number
+      breaks: number
+      break_types: Record<string, number>
+    }
+    settlement: {
+      total: number
+      statuses: Record<string, number>
+    }
+    audit: {
+      records: number
+    }
+  }
+  narrative: string
+}
+
 type TabKey =
   | 'overview'
   | 'architecture'
+  | 'passenger'
   | 'ticket'
   | 'matching'
   | 'recon'
@@ -128,6 +186,7 @@ type TabKey =
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'architecture', label: 'Architecture' },
+  { key: 'passenger', label: 'Passenger Flows' },
   { key: 'ticket', label: 'Ticket Explorer' },
   { key: 'matching', label: 'Coupon Matching' },
   { key: 'recon', label: 'Reconciliation' },
@@ -155,8 +214,9 @@ function App() {
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null)
   const [selectedChannelId, setSelectedChannelId] = useState<string>('')
   const [selectedTopic, setSelectedTopic] = useState<string>('')
+  const [passengerWalkthroughs, setPassengerWalkthroughs] = useState<PassengerWalkthrough[]>([])
 
-  const [ticketSearch, setTicketSearch] = useState('125000000001')
+  const [ticketSearch, setTicketSearch] = useState('125000100001')
   const [ticketDetail, setTicketDetail] = useState<TicketDetail | null>(null)
 
   const [matchingSummary, setMatchingSummary] = useState<MatchingSummary | null>(null)
@@ -165,7 +225,7 @@ function App() {
   const [reconSummary, setReconSummary] = useState<ReconSummary | null>(null)
   const [reconBreaks, setReconBreaks] = useState<ReconBreak[]>([])
 
-  const [auditTicket, setAuditTicket] = useState('125000000001')
+  const [auditTicket, setAuditTicket] = useState('125000100001')
   const [auditHistory, setAuditHistory] = useState<AuditRecord[]>([])
 
   const [dags, setDags] = useState<DagDef[]>([])
@@ -186,16 +246,18 @@ function App() {
 
   const scenarioStats = useMemo(() => {
     if (!dashboard) {
-      return { ticketCount: 0, flightCount: 0, issuedCount: 0, flownCount: 0, settledCount: 0 }
+      return { passengerCount: 0, ticketCount: 0, flightCount: 0, issuedCount: 0, flownCount: 0, settledCount: 0 }
     }
     const issuedEvents = dashboard.topics['ticket.issued']?.events ?? []
     const flownEvents = dashboard.topics['coupon.flown']?.events ?? []
     const settledEvents = dashboard.topics['settlement.due']?.events ?? []
     const tickets = new Set(issuedEvents.map((event) => event.ticket_number))
+    const passengers = new Set(issuedEvents.map((event) => event.passenger_name ?? event.ticket_number))
     const flights = new Set(
       [...issuedEvents, ...flownEvents].map((event) => event.flight_number).filter((flight): flight is string => !!flight)
     )
     return {
+      passengerCount: passengers.size,
       ticketCount: tickets.size,
       flightCount: flights.size,
       issuedCount: issuedEvents.length,
@@ -277,6 +339,10 @@ function App() {
     setSelectedSettlementSaga(await fetchJson<SettlementSaga[]>(`/api/settlements/${settlementId}/saga`))
   }
 
+  async function loadPassengerWalkthroughs() {
+    setPassengerWalkthroughs(await fetchJson<PassengerWalkthrough[]>('/api/walkthroughs'))
+  }
+
   useEffect(() => {
     void loadOverview()
   }, [])
@@ -294,6 +360,11 @@ function App() {
       if (settlements.length === 0) {
         void loadSettlements()
       }
+      if (passengerWalkthroughs.length === 0) {
+        void loadPassengerWalkthroughs()
+      }
+    } else if (activeTab === 'passenger') {
+      void loadPassengerWalkthroughs()
     } else if (activeTab === 'matching') {
       void loadMatching()
     } else if (activeTab === 'recon') {
@@ -405,7 +476,7 @@ function App() {
               <div className="intuition-card">
                 <h3>2. Lifecycle Store</h3>
                 <p>
-                  {scenarioStats.ticketCount} tickets across {scenarioStats.flightCount} flights were replayed into current ticket states.
+                  {scenarioStats.passengerCount} passengers and {scenarioStats.ticketCount} tickets across {scenarioStats.flightCount} flights were replayed into current ticket states.
                 </p>
               </div>
               <div className="intuition-card">
@@ -467,7 +538,7 @@ function App() {
         <section className="panel tab-panel">
           <h2>Architecture Diagram</h2>
           <p className="tab-copy">
-            Scenario: {scenarioStats.ticketCount || 20} tickets across {scenarioStats.flightCount || 5} flights flow through adapters, event bus, lifecycle store, matching, reconciliation, settlement, and audit.
+            Scenario date: 2026-02-27. {scenarioStats.passengerCount || 6} passengers and {scenarioStats.issuedCount || 10} issued coupons across {scenarioStats.flightCount || 3} flights flow through adapters, event bus, lifecycle store, matching, reconciliation, settlement, and audit.
           </p>
           <svg className="arch-diagram" viewBox="0 0 1160 520" role="img" aria-label="FlightLedger architecture flow">
             <rect x="30" y="40" width="220" height="90" rx="14" className="arch-node source" />
@@ -520,6 +591,75 @@ function App() {
             <line x1="580" y1="300" x2="610" y2="370" className="arch-link" />
             <line x1="900" y1="300" x2="940" y2="370" className="arch-link" />
           </svg>
+        </section>
+      )}
+
+      {activeTab === 'passenger' && (
+        <section className="panel tab-panel">
+          <h2>Passenger Flows</h2>
+          <p className="tab-copy">
+            One-day walkthrough on 2026-02-27 for 6 passengers across LHR-SFO, LHR-JFK, and JFK-SFO.
+          </p>
+          <button className="refresh-btn small" onClick={() => void loadPassengerWalkthroughs()}>
+            Refresh Passenger Flows
+          </button>
+          <div className="events-list passenger-list">
+            {passengerWalkthroughs.map((flow) => (
+              <article key={flow.passenger_name} className="event-card passenger-card">
+                <header>
+                  <strong>{flow.passenger_name}</strong>
+                  <span>{flow.tickets.join(', ')}</span>
+                </header>
+                <p className="event-meta">
+                  Channels: {flow.sales_channels.join(', ')} | {flow.narrative}
+                </p>
+                <div className="legs-grid">
+                  {flow.itinerary.map((leg) => (
+                    <div key={`${leg.ticket_number}-${leg.coupon_number}`} className="leg-card">
+                      <strong>
+                        {leg.origin} to {leg.destination}
+                      </strong>
+                      <p>
+                        {leg.flight_number} | coupon {leg.coupon_number} | {leg.marketing_carrier}/{leg.operating_carrier}
+                      </p>
+                      <p>
+                        {leg.currency} {leg.gross_amount?.toFixed(2)} | {leg.sales_channel}
+                      </p>
+                      <p>
+                        matching: {leg.match_status} | recon: {leg.recon_status}
+                        {leg.recon_break_type ? ` (${leg.recon_break_type})` : ''}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <div className="step-grid">
+                  <div className="step-card">
+                    <h3>Ingestion</h3>
+                    <p>{flow.steps.ingestion.issued_coupons} issued coupons ingested.</p>
+                  </div>
+                  <div className="step-card">
+                    <h3>Matching</h3>
+                    <p>
+                      {flow.steps.matching.matched} matched, {flow.steps.matching.unmatched_issued} unmatched issued,{' '}
+                      {flow.steps.matching.unmatched_flown} unmatched flown.
+                    </p>
+                  </div>
+                  <div className="step-card">
+                    <h3>Reconciliation</h3>
+                    <p>
+                      {flow.steps.reconciliation.matched} matched, {flow.steps.reconciliation.breaks} breaks.
+                    </p>
+                  </div>
+                  <div className="step-card">
+                    <h3>Settlement & Audit</h3>
+                    <p>
+                      {flow.steps.settlement.total} settlement items, {flow.steps.audit.records} audit records.
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
         </section>
       )}
 

@@ -403,6 +403,62 @@
   animation: reveal 360ms ease both;
 }
 
+.passenger-list {
+  max-height: none;
+}
+
+.passenger-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: baseline;
+}
+
+.legs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.leg-card {
+  border: 1px solid #deebf6;
+  border-radius: 10px;
+  background: #fcfeff;
+  padding: 0.55rem;
+}
+
+.leg-card p {
+  margin: 0.3rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.step-card {
+  border: 1px solid #deebf6;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.55rem;
+}
+
+.step-card h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.88rem;
+}
+
+.step-card p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
 .event-card header {
   display: flex;
   justify-content: space-between;
@@ -483,6 +539,11 @@
   }
 
   .intuition-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .legs-grid,
+  .step-grid {
     grid-template-columns: 1fr;
   }
 }

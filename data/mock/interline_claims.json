@@ -1,183 +1,39 @@
 {
   "claims": [
     {
-      "claim_id": "CLM-770001",
+      "claim_id": "CLM-0003-1",
       "partner_carrier": "AA",
-      "ticket_number": "125000000001",
-      "coupon_number": 2,
+      "ticket_number": "125000100003",
+      "coupon_number": 1,
       "currency": "USD",
-      "claim_amount": 176.24,
+      "claim_amount": 142.8,
       "claim_status": "submitted"
     },
     {
-      "claim_id": "CLM-770002",
+      "claim_id": "CLM-0004-2",
       "partner_carrier": "AA",
-      "ticket_number": "125000000002",
+      "ticket_number": "125000100004",
       "coupon_number": 2,
       "currency": "USD",
-      "claim_amount": 177.51,
+      "claim_amount": 172.2,
       "claim_status": "submitted"
     },
     {
-      "claim_id": "CLM-770003",
+      "claim_id": "CLM-0005-2",
       "partner_carrier": "AA",
-      "ticket_number": "125000000003",
+      "ticket_number": "125000100005",
       "coupon_number": 2,
       "currency": "USD",
-      "claim_amount": 178.78,
-      "claim_status": "under_review"
-    },
-    {
-      "claim_id": "CLM-770004",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000004",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 180.05,
+      "claim_amount": 151.2,
       "claim_status": "submitted"
     },
     {
-      "claim_id": "CLM-770005",
+      "claim_id": "CLM-0006-2",
       "partner_carrier": "AA",
-      "ticket_number": "125000000005",
+      "ticket_number": "125000100006",
       "coupon_number": 2,
       "currency": "USD",
-      "claim_amount": 181.32,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770006",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000006",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 182.59,
-      "claim_status": "under_review"
-    },
-    {
-      "claim_id": "CLM-770007",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000007",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 183.86,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770008",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000008",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 185.14,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770009",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000009",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 186.41,
-      "claim_status": "under_review"
-    },
-    {
-      "claim_id": "CLM-770010",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000010",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 187.68,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770011",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000011",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 188.95,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770012",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000012",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 190.22,
-      "claim_status": "under_review"
-    },
-    {
-      "claim_id": "CLM-770013",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000013",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 191.49,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770014",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000014",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 192.76,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770015",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000015",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 194.03,
-      "claim_status": "under_review"
-    },
-    {
-      "claim_id": "CLM-770016",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000016",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 195.3,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770017",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000017",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 196.57,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770018",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000018",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 197.85,
-      "claim_status": "under_review"
-    },
-    {
-      "claim_id": "CLM-770019",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000019",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 199.12,
-      "claim_status": "submitted"
-    },
-    {
-      "claim_id": "CLM-770020",
-      "partner_carrier": "AA",
-      "ticket_number": "125000000020",
-      "coupon_number": 2,
-      "currency": "USD",
-      "claim_amount": 200.39,
+      "claim_amount": 170.1,
       "claim_status": "submitted"
     }
   ]

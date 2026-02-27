@@ -2,182 +2,65 @@
 <settlements>
   <record>
     <gds>amadeus</gds>
-    <settlement_week>2026-W10</settlement_week>
-    <ticket_number>125000000001</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>423.10</gross_amount>
-    <net_amount>376.85</net_amount>
-  </record>
-  <record>
-    <gds>sabre</gds>
-    <settlement_week>2026-W11</settlement_week>
-    <ticket_number>125000000002</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>426.20</gross_amount>
-    <net_amount>379.95</net_amount>
-  </record>
-  <record>
-    <gds>amadeus</gds>
     <settlement_week>2026-W09</settlement_week>
-    <ticket_number>125000000003</ticket_number>
+    <ticket_number>125000100001</ticket_number>
     <coupon_number>1</coupon_number>
     <currency>USD</currency>
-    <gross_amount>429.30</gross_amount>
-    <net_amount>383.05</net_amount>
-  </record>
-  <record>
-    <gds>sabre</gds>
-    <settlement_week>2026-W10</settlement_week>
-    <ticket_number>125000000004</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>432.40</gross_amount>
-    <net_amount>386.15</net_amount>
-  </record>
-  <record>
-    <gds>amadeus</gds>
-    <settlement_week>2026-W11</settlement_week>
-    <ticket_number>125000000005</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>435.50</gross_amount>
-    <net_amount>389.25</net_amount>
+    <gross_amount>950.00</gross_amount>
+    <net_amount>900.00</net_amount>
   </record>
   <record>
     <gds>sabre</gds>
     <settlement_week>2026-W09</settlement_week>
-    <ticket_number>125000000006</ticket_number>
+    <ticket_number>125000100002</ticket_number>
     <coupon_number>1</coupon_number>
     <currency>USD</currency>
-    <gross_amount>438.60</gross_amount>
-    <net_amount>392.35</net_amount>
-  </record>
-  <record>
-    <gds>amadeus</gds>
-    <settlement_week>2026-W10</settlement_week>
-    <ticket_number>125000000007</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>441.70</gross_amount>
-    <net_amount>395.45</net_amount>
-  </record>
-  <record>
-    <gds>sabre</gds>
-    <settlement_week>2026-W11</settlement_week>
-    <ticket_number>125000000008</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>444.80</gross_amount>
-    <net_amount>398.55</net_amount>
-  </record>
-  <record>
-    <gds>amadeus</gds>
-    <settlement_week>2026-W09</settlement_week>
-    <ticket_number>125000000009</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>447.90</gross_amount>
-    <net_amount>401.65</net_amount>
-  </record>
-  <record>
-    <gds>sabre</gds>
-    <settlement_week>2026-W10</settlement_week>
-    <ticket_number>125000000010</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>451.00</gross_amount>
-    <net_amount>404.75</net_amount>
-  </record>
-  <record>
-    <gds>amadeus</gds>
-    <settlement_week>2026-W11</settlement_week>
-    <ticket_number>125000000011</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>454.10</gross_amount>
-    <net_amount>407.85</net_amount>
+    <gross_amount>620.00</gross_amount>
+    <net_amount>585.00</net_amount>
   </record>
   <record>
     <gds>sabre</gds>
     <settlement_week>2026-W09</settlement_week>
-    <ticket_number>125000000012</ticket_number>
+    <ticket_number>125000100003</ticket_number>
     <coupon_number>1</coupon_number>
     <currency>USD</currency>
-    <gross_amount>457.20</gross_amount>
-    <net_amount>410.95</net_amount>
-  </record>
-  <record>
-    <gds>amadeus</gds>
-    <settlement_week>2026-W10</settlement_week>
-    <ticket_number>125000000013</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>460.30</gross_amount>
-    <net_amount>414.05</net_amount>
-  </record>
-  <record>
-    <gds>sabre</gds>
-    <settlement_week>2026-W11</settlement_week>
-    <ticket_number>125000000014</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>463.40</gross_amount>
-    <net_amount>417.15</net_amount>
-  </record>
-  <record>
-    <gds>amadeus</gds>
-    <settlement_week>2026-W09</settlement_week>
-    <ticket_number>125000000015</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>466.50</gross_amount>
-    <net_amount>420.25</net_amount>
-  </record>
-  <record>
-    <gds>sabre</gds>
-    <settlement_week>2026-W10</settlement_week>
-    <ticket_number>125000000016</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>469.60</gross_amount>
-    <net_amount>423.35</net_amount>
-  </record>
-  <record>
-    <gds>amadeus</gds>
-    <settlement_week>2026-W11</settlement_week>
-    <ticket_number>125000000017</ticket_number>
-    <coupon_number>1</coupon_number>
-    <currency>USD</currency>
-    <gross_amount>472.70</gross_amount>
-    <net_amount>426.45</net_amount>
+    <gross_amount>340.00</gross_amount>
+    <net_amount>315.00</net_amount>
   </record>
   <record>
     <gds>sabre</gds>
     <settlement_week>2026-W09</settlement_week>
-    <ticket_number>125000000018</ticket_number>
+    <ticket_number>125000100004</ticket_number>
     <coupon_number>1</coupon_number>
     <currency>USD</currency>
-    <gross_amount>475.80</gross_amount>
-    <net_amount>429.55</net_amount>
+    <gross_amount>610.00</gross_amount>
+    <net_amount>575.00</net_amount>
   </record>
   <record>
     <gds>amadeus</gds>
-    <settlement_week>2026-W10</settlement_week>
-    <ticket_number>125000000019</ticket_number>
+    <settlement_week>2026-W09</settlement_week>
+    <ticket_number>125000100005</ticket_number>
     <coupon_number>1</coupon_number>
     <currency>USD</currency>
-    <gross_amount>478.90</gross_amount>
-    <net_amount>432.65</net_amount>
+    <gross_amount>980.00</gross_amount>
+    <net_amount>932.00</net_amount>
   </record>
   <record>
-    <gds>sabre</gds>
-    <settlement_week>2026-W11</settlement_week>
-    <ticket_number>125000000020</ticket_number>
+    <gds>amadeus</gds>
+    <settlement_week>2026-W09</settlement_week>
+    <ticket_number>125000100006</ticket_number>
     <coupon_number>1</coupon_number>
     <currency>USD</currency>
-    <gross_amount>482.00</gross_amount>
-    <net_amount>435.75</net_amount>
+    <gross_amount>605.00</gross_amount>
+    <net_amount>571.00</net_amount>
+  </record>
+  <record>
+    <gds>amadeus</gds>
+    <settlement_week>2026-W09</settlement_week>
+    <ticket_number>125000100006</ticket_number>
+    <coupon_number>2</coupon_number>
+    <currency>USD</currency>
+    <gross_amount>405.00</gross_amount>
+    <net_amount>378.00</net_amount>
   </record>
 </settlements>

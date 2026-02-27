@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from collections import Counter
 from dataclasses import asdict
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -192,6 +193,144 @@ class FlightLedgerRuntime:
         self.ensure_seeded()
         return self.settlement.get_saga(settlement_id)
 
+    def passenger_walkthroughs(self) -> list[dict[str, Any]]:
+        self.ensure_seeded()
+        issued_events = self.ticket_store.get_events_by_type(
+            [CanonicalEventType.TICKET_ISSUED, CanonicalEventType.TICKET_REISSUED]
+        )
+        matching_rows = self.matcher.repository.all_rows()
+        recon_rows = self.recon.repository.all_rows()
+        settlement_rows = self.settlement.list_settlements()
+
+        matching_by_key = {
+            (row.get("ticket_number"), int(row.get("coupon_number"))): row
+            for row in matching_rows
+            if row.get("ticket_number") and row.get("coupon_number") is not None
+        }
+        recon_by_key = {
+            (row.get("ticket_number"), int(row.get("coupon_number"))): row
+            for row in recon_rows
+            if row.get("ticket_number") and row.get("coupon_number") is not None
+        }
+
+        passenger_index: dict[str, dict[str, Any]] = {}
+        for event in sorted(issued_events, key=lambda item: (item.passenger_name or "", item.ticket_number, item.coupon_number or 0)):
+            passenger_name = event.passenger_name or f"Passenger {event.ticket_number}"
+            passenger = passenger_index.setdefault(
+                passenger_name,
+                {
+                    "passenger_name": passenger_name,
+                    "tickets": set(),
+                    "sales_channels": set(),
+                    "itinerary": [],
+                },
+            )
+            passenger["tickets"].add(event.ticket_number)
+            sales_channel = str(event.metadata.get("sales_channel") or "unknown")
+            passenger["sales_channels"].add(sales_channel)
+            key = (event.ticket_number, int(event.coupon_number or 0))
+            matching_row = matching_by_key.get(key)
+            recon_row = recon_by_key.get(key)
+            passenger["itinerary"].append(
+                {
+                    "ticket_number": event.ticket_number,
+                    "pnr": event.pnr,
+                    "coupon_number": event.coupon_number,
+                    "flight_date": event.flight_date.isoformat() if event.flight_date else None,
+                    "flight_number": event.flight_number,
+                    "origin": event.origin,
+                    "destination": event.destination,
+                    "marketing_carrier": event.marketing_carrier,
+                    "operating_carrier": event.operating_carrier,
+                    "gross_amount": _decimal_to_float(event.gross_amount),
+                    "currency": event.currency,
+                    "sales_channel": sales_channel,
+                    "match_status": matching_row.get("status") if matching_row else "missing",
+                    "recon_status": recon_row.get("status") if recon_row else "missing",
+                    "recon_break_type": recon_row.get("break_type") if recon_row else None,
+                }
+            )
+
+        walkthroughs: list[dict[str, Any]] = []
+        for passenger_name in sorted(passenger_index.keys()):
+            passenger = passenger_index[passenger_name]
+            tickets = sorted(passenger["tickets"])
+            itinerary = sorted(passenger["itinerary"], key=lambda leg: (leg["ticket_number"], leg["coupon_number"] or 0))
+            sales_channels = sorted(passenger["sales_channels"])
+
+            source_counter: Counter[str] = Counter()
+            lifecycle_states: list[dict[str, Any]] = []
+            audit_records = 0
+            for ticket_number in tickets:
+                history = self.ticket_store.get_history(ticket_number)
+                for event in history:
+                    source_counter[event.source_system.value] += 1
+                state = self.ticket_store.get_current_state(ticket_number)
+                lifecycle_states.append(
+                    {
+                        "ticket_number": ticket_number,
+                        "status": state.status,
+                        "event_count": state.event_count,
+                        "last_event_type": state.last_event_type,
+                    }
+                )
+                audit_records += len(self.audit.get_history(ticket_number))
+
+            ticket_set = set(tickets)
+            matching_for_passenger = [row for row in matching_rows if row.get("ticket_number") in ticket_set]
+            matching_counter = Counter(str(row.get("status")) for row in matching_for_passenger)
+            recon_for_passenger = [row for row in recon_rows if row.get("ticket_number") in ticket_set]
+            recon_breaks = [row for row in recon_for_passenger if row.get("status") == "break"]
+            recon_break_types = Counter(str(row.get("break_type")) for row in recon_breaks if row.get("break_type"))
+            settlement_for_passenger = [row for row in settlement_rows if row.get("ticket_number") in ticket_set]
+            settlement_counter = Counter(str(row.get("status")) for row in settlement_for_passenger)
+
+            narrative = self._build_passenger_narrative(
+                matched=int(matching_counter.get("matched", 0)),
+                unmatched_issued=int(matching_counter.get("unmatched_issued", 0)),
+                unmatched_flown=int(matching_counter.get("unmatched_flown", 0)),
+                breaks=len(recon_breaks),
+                settlements=len(settlement_for_passenger),
+            )
+
+            walkthroughs.append(
+                {
+                    "passenger_name": passenger_name,
+                    "tickets": tickets,
+                    "sales_channels": sales_channels,
+                    "itinerary": itinerary,
+                    "steps": {
+                        "ingestion": {
+                            "issued_coupons": len(itinerary),
+                            "source_events": dict(source_counter),
+                        },
+                        "lifecycle": {
+                            "ticket_states": lifecycle_states,
+                        },
+                        "matching": {
+                            "matched": int(matching_counter.get("matched", 0)),
+                            "unmatched_issued": int(matching_counter.get("unmatched_issued", 0)),
+                            "unmatched_flown": int(matching_counter.get("unmatched_flown", 0)),
+                            "suspense": int(matching_counter.get("suspense", 0)),
+                        },
+                        "reconciliation": {
+                            "matched": len([row for row in recon_for_passenger if row.get("status") == "matched"]),
+                            "breaks": len(recon_breaks),
+                            "break_types": dict(recon_break_types),
+                        },
+                        "settlement": {
+                            "total": len(settlement_for_passenger),
+                            "statuses": dict(settlement_counter),
+                        },
+                        "audit": {
+                            "records": audit_records,
+                        },
+                    },
+                    "narrative": narrative,
+                }
+            )
+        return walkthroughs
+
     def _ingest_pipeline(self) -> None:
         source_hash_cache: dict[str, str] = {}
 
@@ -348,3 +487,20 @@ class FlightLedgerRuntime:
             ],
         )
         return {month_end.name: month_end}
+
+    @staticmethod
+    def _build_passenger_narrative(
+        matched: int,
+        unmatched_issued: int,
+        unmatched_flown: int,
+        breaks: int,
+        settlements: int,
+    ) -> str:
+        if breaks > 0:
+            return f"{matched} coupon(s) matched, {breaks} recon break(s) need follow-up, {settlements} settlement item(s) created."
+        if unmatched_issued > 0 or unmatched_flown > 0:
+            return (
+                f"{matched} coupon(s) matched with {unmatched_issued} unmatched issued and "
+                f"{unmatched_flown} unmatched flown; review timing/data gaps."
+            )
+        return f"Clean flow: {matched} coupon(s) matched, no recon breaks, {settlements} settlement item(s) progressed."
