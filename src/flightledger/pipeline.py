@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from flightledger.adapters import (
     DcsStreamAdapter,
@@ -69,7 +69,10 @@ SOURCE_CHANNELS = [
 ]
 
 
-def ingest_demo(data_dir: Path) -> tuple[InMemoryBus, list[dict[str, Any]]]:
+def ingest_demo(
+    data_dir: Path,
+    on_event: Callable[[Any, SourceChannel, str], None] | None = None,
+) -> tuple[InMemoryBus, list[dict[str, Any]]]:
     snapshot_bus = InMemoryBus()
     transport_bus = build_transport_bus_from_env()
     bus = snapshot_bus if transport_bus is None else FanoutBus([snapshot_bus, transport_bus])
@@ -81,7 +84,10 @@ def ingest_demo(data_dir: Path) -> tuple[InMemoryBus, list[dict[str, Any]]]:
             payload = file_path.read_text(encoding="utf-8")
             adapter = source.adapter_cls()
             events = adapter.parse(payload)
-            bus.publish_many(events)
+            for event in events:
+                bus.publish(event)
+                if on_event:
+                    on_event(event, source, payload)
             channels.append(
                 {
                     "channel_id": source.channel_id,

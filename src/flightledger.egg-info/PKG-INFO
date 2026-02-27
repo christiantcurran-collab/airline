@@ -7,6 +7,7 @@ Description-Content-Type: text/markdown
 Requires-Dist: fastapi<1,>=0.115
 Requires-Dist: kafka-python<3,>=2.1
 Requires-Dist: pydantic<3,>=2.8
+Requires-Dist: supabase<3,>=2.7
 Requires-Dist: uvicorn<1,>=0.30
 Provides-Extra: dev
 Requires-Dist: pytest<9,>=8.0; extra == "dev"
@@ -82,6 +83,25 @@ In this mode, ingestion still returns local topic snapshots for the dashboard, a
 - `refund.requested`
 - `settlement.due`
 - `booking.modified`
+
+## Deploy On Render
+
+This repo includes a Render Blueprint at `render.yaml`:
+
+- `flightledger-api` (Python web service)
+- `flightledger-frontend` (static site)
+
+Required env vars in Render:
+
+- On `flightledger-api`:
+  - `FLIGHTLEDGER_CORS_ORIGINS=<your-frontend-render-url>`
+- On `flightledger-frontend`:
+  - `VITE_API_BASE_URL=<your-api-render-url>`
+
+Example:
+
+- `FLIGHTLEDGER_CORS_ORIGINS=https://flightledger-frontend.onrender.com`
+- `VITE_API_BASE_URL=https://flightledger-api.onrender.com`
 
 ## Repository Layout
 

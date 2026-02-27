@@ -1,6 +1,7 @@
 fastapi<1,>=0.115
 kafka-python<3,>=2.1
 pydantic<3,>=2.8
+supabase<3,>=2.7
 uvicorn<1,>=0.30
 
 [dev]
