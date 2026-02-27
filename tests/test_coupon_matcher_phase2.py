@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from flightledger.matching.coupon_matcher import CouponMatcher
 from flightledger.models.canonical import CanonicalEvent, CanonicalEventType, SourceSystem
@@ -88,3 +89,20 @@ def test_coupon_matcher_age_suspense() -> None:
     assert len(suspense_items) == 1
     assert suspense_items[0]["days_in_suspense"] == 2
 
+
+def test_coupon_matcher_uses_persisted_event_row_ids_for_foreign_keys() -> None:
+    store = TicketLifecycleStore()
+    store.reset()
+    store.append(_issued("125999999002", 1))
+    store.append(_flown("125999999002", 1))
+
+    matcher = CouponMatcher(store)
+    matcher.run_matching()
+    rows = matcher.repository.all_rows()
+    assert len(rows) == 1
+    issued_fk = rows[0]["issued_event_id"]
+    flown_fk = rows[0]["flown_event_id"]
+    assert issued_fk is not None
+    assert flown_fk is not None
+    UUID(str(issued_fk))
+    UUID(str(flown_fk))

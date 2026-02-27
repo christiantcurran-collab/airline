@@ -113,6 +113,12 @@ class TicketLifecycleStore:
         rows = self.event_repository.get_by_event_types([item.value for item in event_types])
         return [_event_from_row(row) for row in rows]
 
+    def get_persisted_event_row_id(self, canonical_event_id: str) -> str | None:
+        row = self.event_repository.find_by_event_id(canonical_event_id)
+        if not row:
+            return None
+        return str(row.get("id")) if row.get("id") is not None else None
+
     def all_events(self) -> list[CanonicalEvent]:
         rows = self.event_repository.all_rows()
         return [_event_from_row(row) for row in rows]
@@ -169,4 +175,3 @@ class TicketLifecycleStore:
             "coupon_statuses": {str(key): value for key, value in state.coupon_statuses.items()},
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
-

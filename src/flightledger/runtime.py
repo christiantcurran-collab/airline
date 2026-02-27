@@ -6,6 +6,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 from flightledger.audit.lineage import AuditStore
@@ -37,28 +38,31 @@ class FlightLedgerRuntime:
         self._last_channels: list[dict[str, Any]] = []
         self._last_recon_summary = ReconSummary(total_matched=0, total_breaks=0, breaks_by_type={}, breaks_by_severity={})
         self._seeded = False
+        self._seed_lock = Lock()
         self._dags = self._build_dags()
 
     def refresh(self) -> None:
-        if get_storage_backend().value == "memory":
-            reset_memory_backend()
-            self.dag_run_repo = DagRunRepository()
-            self.task_run_repo = TaskRunRepository()
+        with self._seed_lock:
+            if get_storage_backend().value == "memory":
+                reset_memory_backend()
+                self.dag_run_repo = DagRunRepository()
+                self.task_run_repo = TaskRunRepository()
 
-        self.audit.reset()
-        self.ticket_store.reset()
-        self.matcher.reset()
-        self.recon.reset()
-        self.settlement.reset()
-        self._seeded = False
-        self._ingest_pipeline()
-        self._run_matching_recon()
-        self._bootstrap_settlements()
-        self._seeded = True
+            self.audit.reset()
+            self.ticket_store.reset()
+            self.matcher.reset()
+            self.recon.reset()
+            self.settlement.reset()
+            self._seeded = False
+            self._ingest_pipeline()
+            self._run_matching_recon()
+            self._bootstrap_settlements()
+            self._seeded = True
 
     def ensure_seeded(self) -> None:
-        if not self._seeded:
-            self.refresh()
+        if self._seeded:
+            return
+        self.refresh()
 
     def dashboard_payload(self) -> dict[str, Any]:
         self.refresh()
@@ -287,4 +291,3 @@ class FlightLedgerRuntime:
             ],
         )
         return {month_end.name: month_end}
-

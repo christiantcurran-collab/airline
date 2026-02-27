@@ -70,8 +70,8 @@ class CouponMatcher:
                 "ticket_number": ticket_number,
                 "coupon_number": coupon_number,
                 "status": status,
-                "issued_event_id": issued.event_id if issued else None,
-                "flown_event_id": flown.event_id if flown else None,
+                "issued_event_id": self.ticket_store.get_persisted_event_row_id(issued.event_id) if issued else None,
+                "flown_event_id": self.ticket_store.get_persisted_event_row_id(flown.event_id) if flown else None,
                 "issued_at": issued.occurred_at.isoformat() if issued else None,
                 "flown_at": flown.occurred_at.isoformat() if flown else None,
                 "matched_at": datetime.now(timezone.utc).isoformat() if status == "matched" else None,
@@ -110,4 +110,3 @@ class CouponMatcher:
                 self.repository.upsert(row)
                 aged += 1
         return aged
-
