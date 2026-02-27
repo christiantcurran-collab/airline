@@ -10,12 +10,12 @@ services:
       - key: FLIGHTLEDGER_CORS_ORIGINS
         sync: false
 
-  - type: static
+  - type: web
     name: flightledger-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
         sync: false
-
