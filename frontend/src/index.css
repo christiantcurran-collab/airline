@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@600;700&display=swap');
+
+:root {
+  --font-display: 'Sora', sans-serif;
+  --font-body: 'Chivo', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --bg-base: #f5f7f2;
+  --bg-soft: #eef3f7;
+  --ink: #0f1724;
+  --ink-soft: #4f5d6d;
+  --accent: #ff7f4d;
+  --accent-alt: #27b6a2;
+  --accent-strong: #e35b2b;
+  font-family: var(--font-body);
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--ink);
+  background-color: var(--bg-base);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: linear-gradient(180deg, #fefdf8, #f4f7f1 42%, #eef4f8);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}

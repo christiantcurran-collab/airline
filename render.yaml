@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: flightledger-api
+    runtime: python
+    buildCommand: pip install -e .
+    startCommand: uvicorn flightledger.api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: FLIGHTLEDGER_BUS_BACKEND
+        value: memory
+      - key: FLIGHTLEDGER_CORS_ORIGINS
+        sync: false
+
+  - type: static
+    name: flightledger-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+

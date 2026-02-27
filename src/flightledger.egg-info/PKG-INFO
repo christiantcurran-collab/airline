@@ -1,0 +1,95 @@
+Metadata-Version: 2.4
+Name: flightledger
+Version: 0.1.0
+Summary: FlightLedger phase-1 foundation: canonical model, adapters, and local pipeline demo.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: kafka-python<3,>=2.1
+Requires-Dist: pydantic<3,>=2.8
+Requires-Dist: uvicorn<1,>=0.30
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8.0; extra == "dev"
+
+# FlightLedger
+
+Phase-1 implementation based on `FLIGHTLEDGER_V1.md`:
+
+- Canonical event model
+- Five integration adapters (PSS, DCS, GDS, OTA, Interline)
+- Local in-memory message bus simulation with topic fan-out
+- Local FastAPI endpoint for dashboard data
+- Local React dashboard frontend for interactive exploration
+- Optional Kafka publishing backend for event bus
+- Mock source payloads and a runnable ingestion pipeline
+- Unit tests for adapters and publishing behavior
+
+## Quickstart
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .[dev]
+pytest
+python -m flightledger.pipeline
+```
+
+Default bus backend is in-memory (`FLIGHTLEDGER_BUS_BACKEND=memory`).
+
+## Run Local Dashboard
+
+Start API (Terminal 1):
+
+```powershell
+cd C:\Users\ccurr\Desktop\Airline
+uvicorn flightledger.api:app --reload --port 8000
+```
+
+Start frontend (Terminal 2):
+
+```powershell
+cd C:\Users\ccurr\Desktop\Airline\frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+Open:
+
+- `http://127.0.0.1:5173`
+
+## Enable Kafka Bus
+
+Start local Kafka:
+
+```powershell
+cd C:\Users\ccurr\Desktop\Airline
+docker compose -f docker-compose.kafka.yml up -d
+```
+
+Run API in Kafka mode:
+
+```powershell
+cd C:\Users\ccurr\Desktop\Airline
+$env:FLIGHTLEDGER_BUS_BACKEND="kafka"
+$env:FLIGHTLEDGER_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:9092"
+uvicorn flightledger.api:app --reload --port 8000
+```
+
+In this mode, ingestion still returns local topic snapshots for the dashboard, and also publishes every canonical event to Kafka topics:
+
+- `ticket.issued`
+- `coupon.flown`
+- `refund.requested`
+- `settlement.due`
+- `booking.modified`
+
+## Repository Layout
+
+- `src/flightledger/models/canonical.py`: Canonical record schema
+- `src/flightledger/adapters/`: Source-specific normalization adapters
+- `src/flightledger/bus/in_memory.py`: Topic publisher for local demo
+- `src/flightledger/pipeline.py`: End-to-end ingestion demo
+- `src/flightledger/api.py`: FastAPI dashboard endpoint (`/api/dashboard`)
+- `frontend/`: React + Vite dashboard UI
+- `data/mock/`: Example source payloads
+- `tests/`: Unit tests
