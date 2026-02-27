@@ -117,6 +117,7 @@ type SettlementSaga = {
 
 type TabKey =
   | 'overview'
+  | 'architecture'
   | 'ticket'
   | 'matching'
   | 'recon'
@@ -126,6 +127,7 @@ type TabKey =
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
+  { key: 'architecture', label: 'Architecture' },
   { key: 'ticket', label: 'Ticket Explorer' },
   { key: 'matching', label: 'Coupon Matching' },
   { key: 'recon', label: 'Reconciliation' },
@@ -181,6 +183,26 @@ function App() {
     () => (dashboard && selectedTopic ? dashboard.topics[selectedTopic]?.events ?? [] : []),
     [dashboard, selectedTopic]
   )
+
+  const scenarioStats = useMemo(() => {
+    if (!dashboard) {
+      return { ticketCount: 0, flightCount: 0, issuedCount: 0, flownCount: 0, settledCount: 0 }
+    }
+    const issuedEvents = dashboard.topics['ticket.issued']?.events ?? []
+    const flownEvents = dashboard.topics['coupon.flown']?.events ?? []
+    const settledEvents = dashboard.topics['settlement.due']?.events ?? []
+    const tickets = new Set(issuedEvents.map((event) => event.ticket_number))
+    const flights = new Set(
+      [...issuedEvents, ...flownEvents].map((event) => event.flight_number).filter((flight): flight is string => !!flight)
+    )
+    return {
+      ticketCount: tickets.size,
+      flightCount: flights.size,
+      issuedCount: issuedEvents.length,
+      flownCount: flownEvents.length,
+      settledCount: settledEvents.length,
+    }
+  }, [dashboard])
 
   async function loadOverview(forceRefresh = false) {
     setLoading(true)
@@ -262,6 +284,16 @@ function App() {
   useEffect(() => {
     if (activeTab === 'ticket') {
       void loadTicket(ticketSearch)
+    } else if (activeTab === 'overview') {
+      if (!matchingSummary) {
+        void loadMatching()
+      }
+      if (!reconSummary) {
+        void loadRecon()
+      }
+      if (settlements.length === 0) {
+        void loadSettlements()
+      }
     } else if (activeTab === 'matching') {
       void loadMatching()
     } else if (activeTab === 'recon') {
@@ -361,6 +393,44 @@ function App() {
             </div>
           </article>
 
+          <article className="panel intuition-panel">
+            <h2>Process Intuition</h2>
+            <div className="intuition-grid">
+              <div className="intuition-card">
+                <h3>1. Ingestion</h3>
+                <p>
+                  {dashboard.total_channels} channels produced {dashboard.total_events} canonical events for this run.
+                </p>
+              </div>
+              <div className="intuition-card">
+                <h3>2. Lifecycle Store</h3>
+                <p>
+                  {scenarioStats.ticketCount} tickets across {scenarioStats.flightCount} flights were replayed into current ticket states.
+                </p>
+              </div>
+              <div className="intuition-card">
+                <h3>3. Coupon Matching</h3>
+                <p>
+                  {matchingSummary
+                    ? `${matchingSummary.matched} matched, ${matchingSummary.unmatched_issued} unmatched issued, ${matchingSummary.unmatched_flown} unmatched flown.`
+                    : 'Open Coupon Matching for detailed status.'}
+                </p>
+              </div>
+              <div className="intuition-card">
+                <h3>4. Reconciliation</h3>
+                <p>
+                  {reconSummary
+                    ? `${reconSummary.total_matched} matched and ${reconSummary.total_breaks} breaks classified for follow-up.`
+                    : 'Open Reconciliation to classify breaks by type and severity.'}
+                </p>
+              </div>
+              <div className="intuition-card">
+                <h3>5. Settlement Saga</h3>
+                <p>{settlements.length} settlement records progressed through calculate, validate, submit, confirm, and reconcile/compensate.</p>
+              </div>
+            </div>
+          </article>
+
           <article className="panel topics-panel">
             <h2>Topic Throughput</h2>
             <div className="topics-list">
@@ -390,6 +460,66 @@ function App() {
               ))}
             </div>
           </article>
+        </section>
+      )}
+
+      {activeTab === 'architecture' && (
+        <section className="panel tab-panel">
+          <h2>Architecture Diagram</h2>
+          <p className="tab-copy">
+            Scenario: {scenarioStats.ticketCount || 20} tickets across {scenarioStats.flightCount || 5} flights flow through adapters, event bus, lifecycle store, matching, reconciliation, settlement, and audit.
+          </p>
+          <svg className="arch-diagram" viewBox="0 0 1160 520" role="img" aria-label="FlightLedger architecture flow">
+            <rect x="30" y="40" width="220" height="90" rx="14" className="arch-node source" />
+            <text x="50" y="76" className="arch-title">Source Channels</text>
+            <text x="50" y="102" className="arch-text">PSS, DCS, GDS, OTA, Interline</text>
+
+            <rect x="300" y="40" width="200" height="90" rx="14" className="arch-node adapter" />
+            <text x="320" y="76" className="arch-title">Adapters</text>
+            <text x="320" y="102" className="arch-text">Normalize to CanonicalEvent</text>
+
+            <rect x="550" y="40" width="200" height="90" rx="14" className="arch-node bus" />
+            <text x="570" y="76" className="arch-title">Message Bus</text>
+            <text x="570" y="102" className="arch-text">{dashboard?.bus_backend ?? 'memory'} topics by ticket</text>
+
+            <rect x="800" y="40" width="320" height="90" rx="14" className="arch-node store" />
+            <text x="820" y="76" className="arch-title">Ticket Lifecycle Store (Event Sourcing)</text>
+            <text x="820" y="102" className="arch-text">Append-only history + CQRS current-state view</text>
+
+            <rect x="120" y="210" width="280" height="90" rx="14" className="arch-node matcher" />
+            <text x="140" y="246" className="arch-title">Coupon Matching Engine</text>
+            <text x="140" y="272" className="arch-text">Issued vs flown, suspense aging</text>
+
+            <rect x="440" y="210" width="280" height="90" rx="14" className="arch-node recon" />
+            <text x="460" y="246" className="arch-title">Reconciliation Engine</text>
+            <text x="460" y="272" className="arch-text">3-way match + break classification</text>
+
+            <rect x="760" y="210" width="280" height="90" rx="14" className="arch-node settle" />
+            <text x="780" y="246" className="arch-title">Settlement Saga Engine</text>
+            <text x="780" y="272" className="arch-text">Calculate -&gt; validate -&gt; submit -&gt; confirm</text>
+
+            <rect x="120" y="370" width="300" height="90" rx="14" className="arch-node audit" />
+            <text x="140" y="406" className="arch-title">Audit & Lineage</text>
+            <text x="140" y="432" className="arch-text">Immutable trace per ticket/output</text>
+
+            <rect x="460" y="370" width="300" height="90" rx="14" className="arch-node dag" />
+            <text x="480" y="406" className="arch-title">DAG Orchestrator</text>
+            <text x="480" y="432" className="arch-text">Month-end dependency execution</text>
+
+            <rect x="800" y="370" width="280" height="90" rx="14" className="arch-node ui" />
+            <text x="820" y="406" className="arch-title">API + Dashboard</text>
+            <text x="820" y="432" className="arch-text">Operational views and drill-down</text>
+
+            <line x1="250" y1="85" x2="300" y2="85" className="arch-link" />
+            <line x1="500" y1="85" x2="550" y2="85" className="arch-link" />
+            <line x1="750" y1="85" x2="800" y2="85" className="arch-link" />
+            <line x1="960" y1="130" x2="260" y2="210" className="arch-link" />
+            <line x1="960" y1="130" x2="580" y2="210" className="arch-link" />
+            <line x1="960" y1="130" x2="900" y2="210" className="arch-link" />
+            <line x1="260" y1="300" x2="260" y2="370" className="arch-link" />
+            <line x1="580" y1="300" x2="610" y2="370" className="arch-link" />
+            <line x1="900" y1="300" x2="940" y2="370" className="arch-link" />
+          </svg>
         </section>
       )}
 

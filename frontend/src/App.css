@@ -177,6 +177,34 @@
   grid-column: span 2;
 }
 
+.intuition-panel {
+  grid-column: span 2;
+}
+
+.intuition-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+  padding: 0.65rem 1rem 1rem;
+}
+
+.intuition-card {
+  border: 1px solid #deebf6;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.7rem;
+}
+
+.intuition-card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.intuition-card p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
 .channels-layout {
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
@@ -254,6 +282,11 @@
   margin-top: 1rem;
 }
 
+.tab-copy {
+  margin: 0 1rem 0.8rem;
+  color: var(--ink-soft);
+}
+
 .tab-panel pre {
   margin: 0 1rem 1rem;
   border: 1px solid #deebf6;
@@ -291,6 +324,75 @@
 
 .resolve-btn {
   margin-left: 0.6rem;
+}
+
+.arch-diagram {
+  width: calc(100% - 2rem);
+  margin: 0 1rem 1rem;
+  border: 1px solid #deebf6;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.arch-node {
+  stroke: #cad9ea;
+  stroke-width: 1.4;
+}
+
+.arch-node.source {
+  fill: #fef2e5;
+}
+
+.arch-node.adapter {
+  fill: #eef8ff;
+}
+
+.arch-node.bus {
+  fill: #eefcf6;
+}
+
+.arch-node.store {
+  fill: #f5f1ff;
+}
+
+.arch-node.matcher {
+  fill: #fff7ec;
+}
+
+.arch-node.recon {
+  fill: #eff6ff;
+}
+
+.arch-node.settle {
+  fill: #eefdf8;
+}
+
+.arch-node.audit {
+  fill: #fff3f0;
+}
+
+.arch-node.dag {
+  fill: #f3f4ff;
+}
+
+.arch-node.ui {
+  fill: #eefdff;
+}
+
+.arch-title {
+  font-size: 16px;
+  font-weight: 700;
+  fill: #101828;
+}
+
+.arch-text {
+  font-size: 12px;
+  fill: #475467;
+}
+
+.arch-link {
+  stroke: #95a8bd;
+  stroke-width: 1.6;
 }
 
 .event-card {
@@ -377,6 +479,10 @@
   }
 
   .channels-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .intuition-grid {
     grid-template-columns: 1fr;
   }
 }
