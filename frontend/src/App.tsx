@@ -182,11 +182,13 @@ function App() {
     [dashboard, selectedTopic]
   )
 
-  async function loadOverview() {
+  async function loadOverview(forceRefresh = false) {
     setLoading(true)
     setError(null)
     try {
-      const payload = await fetchJson<DashboardPayload>('/api/dashboard')
+      const payload = await fetchJson<DashboardPayload>(
+        forceRefresh ? '/api/dashboard?refresh=true' : '/api/dashboard'
+      )
       setDashboard(payload)
       if (!selectedChannelId) {
         setSelectedChannelId(payload.channels[0]?.channel_id ?? '')
@@ -289,7 +291,7 @@ function App() {
         <p className="eyebrow">FlightLedger Phase 2</p>
         <h1>Revenue Accounting Platform</h1>
         <p className="hero-copy">Event sourcing, matching, reconciliation, lineage, orchestration, and settlements.</p>
-        <button className="refresh-btn" onClick={() => void loadOverview()} disabled={loading}>
+        <button className="refresh-btn" onClick={() => void loadOverview(true)} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh Ingestion'}
         </button>
       </section>

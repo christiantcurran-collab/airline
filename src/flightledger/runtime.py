@@ -41,8 +41,10 @@ class FlightLedgerRuntime:
         self._seed_lock = Lock()
         self._dags = self._build_dags()
 
-    def refresh(self) -> None:
+    def refresh(self, force: bool = True) -> None:
         with self._seed_lock:
+            if self._seeded and not force:
+                return
             if get_storage_backend().value == "memory":
                 reset_memory_backend()
                 self.dag_run_repo = DagRunRepository()
@@ -62,10 +64,13 @@ class FlightLedgerRuntime:
     def ensure_seeded(self) -> None:
         if self._seeded:
             return
-        self.refresh()
+        self.refresh(force=False)
 
-    def dashboard_payload(self) -> dict[str, Any]:
-        self.refresh()
+    def dashboard_payload(self, refresh: bool = False) -> dict[str, Any]:
+        if refresh:
+            self.refresh(force=True)
+        else:
+            self.ensure_seeded()
         topics: dict[str, Any] = {}
         total_events = 0
         for topic, events in sorted(self._last_bus.topics.items()):

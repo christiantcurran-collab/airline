@@ -43,7 +43,12 @@ class ResolveBreakRequest(BaseModel):
 
 
 def build_dashboard_payload() -> dict[str, Any]:
-    return runtime.dashboard_payload()
+    return runtime.dashboard_payload(refresh=False)
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {"service": "flightledger-api", "status": "ok"}
 
 
 @app.get("/health")
@@ -52,8 +57,8 @@ def health() -> dict[str, str]:
 
 
 @app.get("/api/dashboard")
-def dashboard() -> dict[str, Any]:
-    return runtime.dashboard_payload()
+def dashboard(refresh: bool = False) -> dict[str, Any]:
+    return runtime.dashboard_payload(refresh=refresh)
 
 
 @app.get("/api/tickets/{ticket_number}")
