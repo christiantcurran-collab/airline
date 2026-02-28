@@ -4,13 +4,13 @@
   --font-display: 'Sora', sans-serif;
   --font-body: 'Chivo', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
-  --bg-base: #f5f7f2;
-  --bg-soft: #eef3f7;
-  --ink: #0f1724;
-  --ink-soft: #4f5d6d;
-  --accent: #ff7f4d;
-  --accent-alt: #27b6a2;
-  --accent-strong: #e35b2b;
+  --bg-base: #f4f8ff;
+  --bg-soft: #eef4ff;
+  --ink: #102a4f;
+  --ink-soft: #4f678a;
+  --accent: #2f65b8;
+  --accent-alt: #5b8fdd;
+  --accent-strong: #1d4f9d;
   font-family: var(--font-body);
   line-height: 1.45;
   font-weight: 400;
@@ -30,7 +30,7 @@ body {
   min-width: 320px;
   font-family: var(--font-body);
   color: var(--ink);
-  background: linear-gradient(180deg, #fefdf8, #f4f7f1 42%, #eef4f8);
+  background: linear-gradient(180deg, #f7faff, #eef4ff 45%, #eaf2ff);
 }
 
 h1,

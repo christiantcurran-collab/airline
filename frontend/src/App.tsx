@@ -22,31 +22,16 @@ type DashboardPayload = {
   total_channels: number
   total_topics: number
   total_events: number
-  channels: SourceChannel[]
+  channels: {
+    channel_id: string
+    name: string
+    protocol: string
+    format: string
+    file_name: string
+    record_count: number
+    raw_payload: string
+  }[]
   topics: Record<string, { count: number; events: CanonicalEvent[] }>
-}
-
-type SourceChannel = {
-  channel_id: string
-  name: string
-  protocol: string
-  format: string
-  file_name: string
-  record_count: number
-  raw_payload: string
-}
-
-type TicketDetail = {
-  ticket_number: string
-  state: {
-    status: string
-    current_amount: number | null
-    coupon_statuses: Record<string, string>
-    last_modified: string | null
-    event_count: number
-    currency: string | null
-  }
-  history: CanonicalEvent[]
 }
 
 type MatchingSummary = {
@@ -73,32 +58,6 @@ type ReconBreak = {
   resolution: string
 }
 
-type AuditRecord = {
-  id: string
-  timestamp: string
-  action: string
-  component: string
-  output_reference: string | null
-}
-
-type DagDef = {
-  name: string
-  tasks: { name: string; depends_on: string[] }[]
-}
-
-type DagRun = {
-  run: { id: string; dag_name: string; status: string; started_at: string; completed_at: string | null }
-  tasks: {
-    id: string
-    task_name: string
-    status: string
-    depends_on: string[]
-    started_at: string | null
-    completed_at: string | null
-    error_message: string | null
-  }[]
-}
-
 type Settlement = {
   id: string
   ticket_number: string
@@ -108,12 +67,42 @@ type Settlement = {
   their_amount: number | null
 }
 
-type SettlementSaga = {
+type AuditRecord = {
   id: string
-  action: string
-  from_status: string
-  to_status: string
   timestamp: string
+  action: string
+  component: string
+  output_reference: string | null
+}
+
+type TicketDetail = {
+  ticket_number: string
+  state: {
+    status: string
+    current_amount: number | null
+    coupon_statuses: Record<string, string>
+    last_modified: string | null
+    event_count: number
+    currency: string | null
+  }
+  history: CanonicalEvent[]
+}
+
+type PassengerWalkthrough = {
+  passenger_name: string
+  tickets: string[]
+  sales_channels: string[]
+  purchase_summary: {
+    ticket_number: string
+    pnr: string | null
+    sales_channel: string
+    coupons: number
+    total_paid: number | null
+    currency: string | null
+    journey: string
+  }[]
+  narrative: string
+  result_meaning: string[]
 }
 
 type SimulationOperation = {
@@ -179,95 +168,20 @@ type SimulationState = {
   }
 }
 
-type PassengerWalkthrough = {
-  passenger_name: string
-  tickets: string[]
-  sales_channels: string[]
-  purchase_summary: {
-    ticket_number: string
-    pnr: string | null
-    sales_channel: string
-    coupons: number
-    total_paid: number | null
-    currency: string | null
-    journey: string
-  }[]
-  itinerary: {
-    ticket_number: string
-    pnr: string | null
-    coupon_number: number | null
-    flight_date: string | null
-    flight_number: string | null
-    origin: string | null
-    destination: string | null
-    marketing_carrier: string | null
-    operating_carrier: string | null
-    gross_amount: number | null
-    currency: string | null
-    sales_channel: string
-    match_status: string
-    recon_status: string
-    recon_break_type: string | null
-  }[]
-  steps: {
-    ingestion: {
-      issued_coupons: number
-      source_events: Record<string, number>
-    }
-    lifecycle: {
-      ticket_states: {
-        ticket_number: string
-        status: string
-        event_count: number
-        last_event_type: string | null
-      }[]
-    }
-    matching: {
-      matched: number
-      unmatched_issued: number
-      unmatched_flown: number
-      suspense: number
-    }
-    reconciliation: {
-      matched: number
-      breaks: number
-      break_types: Record<string, number>
-    }
-    settlement: {
-      total: number
-      statuses: Record<string, number>
-    }
-    audit: {
-      records: number
-    }
-  }
-  narrative: string
-  result_meaning: string[]
-}
+type MainTab = 'visualisation' | 'architecture' | 'operations'
 
-type TabKey =
-  | 'overview'
-  | 'simulation'
-  | 'architecture'
-  | 'passenger'
-  | 'ticket'
-  | 'matching'
-  | 'recon'
-  | 'audit'
-  | 'orchestrator'
-  | 'settlements'
-
-const tabs: { key: TabKey; label: string }[] = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'simulation', label: 'Simulation' },
+const mainTabs: { key: MainTab; label: string }[] = [
+  { key: 'visualisation', label: 'Visualisation' },
   { key: 'architecture', label: 'Architecture' },
-  { key: 'passenger', label: 'Passenger Flows' },
-  { key: 'ticket', label: 'Ticket Explorer' },
-  { key: 'matching', label: 'Coupon Matching' },
-  { key: 'recon', label: 'Reconciliation' },
-  { key: 'audit', label: 'Audit & Lineage' },
-  { key: 'orchestrator', label: 'Orchestrator' },
-  { key: 'settlements', label: 'Settlements' },
+  { key: 'operations', label: 'Operations' },
+]
+
+const pipelineNodes = [
+  { key: 'monte_carlo', label: 'Monte Carlo' },
+  { key: 'adapter', label: 'Adapter' },
+  { key: 'bus', label: 'Bus' },
+  { key: 'event_store', label: 'Event Store' },
+  { key: 'cqrs_read_model', label: 'Read Model' },
 ]
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/$/, '')
@@ -281,157 +195,152 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+function operationNarrative(operation: SimulationOperation): string {
+  const snippet = operation.snippet
+  const ticket = typeof snippet.ticket_number === 'string' ? snippet.ticket_number : null
+  const coupon = typeof snippet.coupon_number === 'number' ? snippet.coupon_number : null
+  const eventType = typeof snippet.event_type === 'string' ? snippet.event_type : null
+
+  if (operation.component === 'monte_carlo') {
+    const ticketCount = typeof snippet.ticket_count === 'number' ? snippet.ticket_count : 0
+    const couponCount = typeof snippet.coupons === 'number' ? snippet.coupons : 0
+    return `Simulation created ${ticketCount} tickets and ${couponCount} coupons with realistic variance.`
+  }
+  if (operation.component === 'adapter') {
+    return ticket
+      ? `Raw source payload for ${ticket}${coupon ? ` coupon ${coupon}` : ''} was normalized into canonical format.`
+      : 'Raw source payload was normalized into canonical format.'
+  }
+  if (operation.component === 'bus') {
+    return eventType
+      ? `Canonical event ${eventType} was published on the message bus for downstream consumers.`
+      : 'Canonical event was published on the message bus.'
+  }
+  if (operation.component === 'event_store') {
+    return ticket
+      ? `Event-sourcing append completed for ${ticket}; immutable history grew by one event.`
+      : 'Event appended to immutable lifecycle history.'
+  }
+  if (operation.component === 'cqrs_read_model') {
+    return ticket
+      ? `CQRS projection refreshed for ${ticket}; read model is now query-optimized.`
+      : 'CQRS read projection updated.'
+  }
+  return operation.message
+}
+
 function App() {
-  const [activeTab, setActiveTab] = useState<TabKey>('overview')
-  const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<MainTab>('visualisation')
   const [error, setError] = useState<string | null>(null)
+  const [globalLoading, setGlobalLoading] = useState(false)
 
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null)
-  const [selectedChannelId, setSelectedChannelId] = useState<string>('')
-  const [selectedTopic, setSelectedTopic] = useState<string>('')
   const [simulationState, setSimulationState] = useState<SimulationState | null>(null)
   const [simulationLoading, setSimulationLoading] = useState(false)
+  const [selectedOperationIndex, setSelectedOperationIndex] = useState(0)
+
+  const [matchingSummary, setMatchingSummary] = useState<MatchingSummary | null>(null)
+  const [reconSummary, setReconSummary] = useState<ReconSummary | null>(null)
+  const [reconBreaks, setReconBreaks] = useState<ReconBreak[]>([])
+  const [settlements, setSettlements] = useState<Settlement[]>([])
   const [passengerWalkthroughs, setPassengerWalkthroughs] = useState<PassengerWalkthrough[]>([])
 
   const [ticketSearch, setTicketSearch] = useState('125000100001')
   const [ticketDetail, setTicketDetail] = useState<TicketDetail | null>(null)
-
-  const [matchingSummary, setMatchingSummary] = useState<MatchingSummary | null>(null)
-  const [suspenseItems, setSuspenseItems] = useState<Record<string, unknown>[]>([])
-
-  const [reconSummary, setReconSummary] = useState<ReconSummary | null>(null)
-  const [reconBreaks, setReconBreaks] = useState<ReconBreak[]>([])
-
   const [auditTicket, setAuditTicket] = useState('125000100001')
   const [auditHistory, setAuditHistory] = useState<AuditRecord[]>([])
 
-  const [dags, setDags] = useState<DagDef[]>([])
-  const [selectedRun, setSelectedRun] = useState<DagRun | null>(null)
+  const [operationsLoaded, setOperationsLoaded] = useState(false)
 
-  const [settlements, setSettlements] = useState<Settlement[]>([])
-  const [selectedSettlementSaga, setSelectedSettlementSaga] = useState<SettlementSaga[]>([])
-
-  const selectedChannel = useMemo(
-    () => dashboard?.channels.find((channel) => channel.channel_id === selectedChannelId) ?? null,
-    [dashboard, selectedChannelId]
-  )
-
-  const selectedTopicEvents = useMemo(
-    () => (dashboard && selectedTopic ? dashboard.topics[selectedTopic]?.events ?? [] : []),
-    [dashboard, selectedTopic]
-  )
-
-  const simulationPipeline = ['monte_carlo', 'adapter', 'bus', 'event_store', 'cqrs_read_model']
-  const simulationActiveComponent = simulationState?.operations.at(-1)?.component ?? ''
-
-  const scenarioStats = useMemo(() => {
-    if (!dashboard) {
-      return { passengerCount: 0, ticketCount: 0, flightCount: 0, issuedCount: 0, flownCount: 0, settledCount: 0 }
+  const selectedOperation = useMemo(() => {
+    if (!simulationState || simulationState.operations.length === 0) {
+      return null
     }
-    const issuedEvents = dashboard.topics['ticket.issued']?.events ?? []
-    const flownEvents = dashboard.topics['coupon.flown']?.events ?? []
-    const settledEvents = dashboard.topics['settlement.due']?.events ?? []
+    const maxIndex = simulationState.operations.length - 1
+    const safeIndex = Math.max(0, Math.min(selectedOperationIndex, maxIndex))
+    return simulationState.operations[safeIndex]
+  }, [simulationState, selectedOperationIndex])
+
+  const selectedOperationNarrative = useMemo(() => {
+    if (!selectedOperation) {
+      return 'Generate a flight to start the walkthrough.'
+    }
+    return operationNarrative(selectedOperation)
+  }, [selectedOperation])
+
+  const issuedEvents = dashboard?.topics['ticket.issued']?.events ?? []
+  const scenarioStats = useMemo(() => {
     const tickets = new Set(issuedEvents.map((event) => event.ticket_number))
     const passengers = new Set(issuedEvents.map((event) => event.passenger_name ?? event.ticket_number))
-    const flights = new Set(
-      [...issuedEvents, ...flownEvents].map((event) => event.flight_number).filter((flight): flight is string => !!flight)
-    )
+    const flights = new Set(issuedEvents.map((event) => event.flight_number).filter((value): value is string => !!value))
     return {
-      passengerCount: passengers.size,
-      ticketCount: tickets.size,
-      flightCount: flights.size,
-      issuedCount: issuedEvents.length,
-      flownCount: flownEvents.length,
-      settledCount: settledEvents.length,
+      passengers: passengers.size,
+      tickets: tickets.size,
+      flights: flights.size,
+      events: dashboard?.total_events ?? 0,
     }
-  }, [dashboard])
+  }, [dashboard, issuedEvents])
 
-  async function loadOverview(forceRefresh = false) {
-    setLoading(true)
+  const settlementStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const item of settlements) {
+      counts[item.status] = (counts[item.status] ?? 0) + 1
+    }
+    return counts
+  }, [settlements])
+
+  async function loadDashboard(refresh = false) {
+    const payload = await fetchJson<DashboardPayload>(refresh ? '/api/dashboard?refresh=true' : '/api/dashboard')
+    setDashboard(payload)
+  }
+
+  async function loadSimulationState() {
+    const state = await fetchJson<SimulationState>('/api/simulation/state')
+    setSimulationState(state)
+    if (state.operations.length > 0) {
+      setSelectedOperationIndex(state.operations.length - 1)
+    } else {
+      setSelectedOperationIndex(0)
+    }
+  }
+
+  async function loadOperationsData() {
+    const [matching, recon, breaks, settlementRows, passengerRows] = await Promise.all([
+      fetchJson<MatchingSummary>('/api/matching/summary'),
+      fetchJson<ReconSummary>('/api/recon/summary'),
+      fetchJson<ReconBreak[]>('/api/recon/breaks?status=unresolved'),
+      fetchJson<Settlement[]>('/api/settlements'),
+      fetchJson<PassengerWalkthrough[]>('/api/walkthroughs'),
+    ])
+    setMatchingSummary(matching)
+    setReconSummary(recon)
+    setReconBreaks(breaks)
+    setSettlements(settlementRows)
+    setPassengerWalkthroughs(passengerRows)
+  }
+
+  async function refreshAll() {
+    setGlobalLoading(true)
     setError(null)
     try {
-      const payload = await fetchJson<DashboardPayload>(
-        forceRefresh ? '/api/dashboard?refresh=true' : '/api/dashboard'
-      )
-      setDashboard(payload)
-      if (!selectedChannelId) {
-        setSelectedChannelId(payload.channels[0]?.channel_id ?? '')
-      }
-      if (!selectedTopic) {
-        setSelectedTopic(Object.keys(payload.topics)[0] ?? '')
+      await Promise.all([loadDashboard(true), loadSimulationState()])
+      if (operationsLoaded || activeTab === 'operations') {
+        await loadOperationsData()
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'unknown error')
     } finally {
-      setLoading(false)
+      setGlobalLoading(false)
     }
   }
 
-  async function loadTicket(ticketNumber: string) {
-    setTicketDetail(await fetchJson<TicketDetail>(`/api/tickets/${ticketNumber}`))
-  }
-
-  async function loadMatching() {
-    const [summary, suspense] = await Promise.all([
-      fetchJson<MatchingSummary>('/api/matching/summary'),
-      fetchJson<Record<string, unknown>[]>('/api/matching/suspense?min_age_days=1'),
-    ])
-    setMatchingSummary(summary)
-    setSuspenseItems(suspense)
-  }
-
-  async function loadRecon() {
-    const [summary, breaks] = await Promise.all([
-      fetchJson<ReconSummary>('/api/recon/summary'),
-      fetchJson<ReconBreak[]>('/api/recon/breaks?status=unresolved'),
-    ])
-    setReconSummary(summary)
-    setReconBreaks(breaks)
-  }
-
-  async function resolveBreak(breakId: string) {
-    await fetchJson<{ status: string }>(`/api/recon/breaks/${breakId}/resolve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resolution: 'manually_resolved', notes: 'Resolved from dashboard' }),
-    })
-    await loadRecon()
-  }
-
-  async function loadAudit(ticketNumber: string) {
-    setAuditHistory(await fetchJson<AuditRecord[]>(`/api/audit/${ticketNumber}`))
-  }
-
-  async function loadDags() {
-    setDags(await fetchJson<DagDef[]>('/api/orchestrator/dags'))
-  }
-
-  async function runDag(dagName: string) {
-    const run = await fetchJson<{ run_id: string }>(`/api/orchestrator/run/${dagName}`, { method: 'POST' })
-    setSelectedRun(await fetchJson<DagRun>(`/api/orchestrator/runs/${run.run_id}`))
-  }
-
-  async function loadSettlements() {
-    setSettlements(await fetchJson<Settlement[]>('/api/settlements'))
-  }
-
-  async function loadSettlementSaga(settlementId: string) {
-    setSelectedSettlementSaga(await fetchJson<SettlementSaga[]>(`/api/settlements/${settlementId}/saga`))
-  }
-
-  async function loadPassengerWalkthroughs() {
-    setPassengerWalkthroughs(await fetchJson<PassengerWalkthrough[]>('/api/walkthroughs'))
-  }
-
-  async function loadSimulationState() {
-    setSimulationState(await fetchJson<SimulationState>('/api/simulation/state'))
-  }
-
-  async function generateSimulationFlight() {
+  async function generateFlight() {
     setSimulationLoading(true)
     setError(null)
     try {
-      setSimulationState(await fetchJson<SimulationState>('/api/simulation/generate-flight', { method: 'POST' }))
+      const state = await fetchJson<SimulationState>('/api/simulation/generate-flight', { method: 'POST' })
+      setSimulationState(state)
+      setSelectedOperationIndex(Math.max(0, state.operations.length - 1))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'unknown error')
     } finally {
@@ -439,11 +348,13 @@ function App() {
     }
   }
 
-  async function processSimulationBookings() {
+  async function processBookings() {
     setSimulationLoading(true)
     setError(null)
     try {
-      setSimulationState(await fetchJson<SimulationState>('/api/simulation/process-bookings', { method: 'POST' }))
+      const state = await fetchJson<SimulationState>('/api/simulation/process-bookings', { method: 'POST' })
+      setSimulationState(state)
+      setSelectedOperationIndex(Math.max(0, state.operations.length - 1))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'unknown error')
     } finally {
@@ -455,7 +366,9 @@ function App() {
     setSimulationLoading(true)
     setError(null)
     try {
-      setSimulationState(await fetchJson<SimulationState>('/api/simulation/reset', { method: 'POST' }))
+      const state = await fetchJson<SimulationState>('/api/simulation/reset', { method: 'POST' })
+      setSimulationState(state)
+      setSelectedOperationIndex(0)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'unknown error')
     } finally {
@@ -463,42 +376,37 @@ function App() {
     }
   }
 
+  async function loadTicket(ticketNumber: string) {
+    setTicketDetail(await fetchJson<TicketDetail>(`/api/tickets/${ticketNumber}`))
+  }
+
+  async function loadAudit(ticketNumber: string) {
+    setAuditHistory(await fetchJson<AuditRecord[]>(`/api/audit/${ticketNumber}`))
+  }
+
   useEffect(() => {
-    void loadOverview()
+    setGlobalLoading(true)
+    setError(null)
+    void Promise.all([loadDashboard(false), loadSimulationState()])
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'unknown error')
+      })
+      .finally(() => setGlobalLoading(false))
   }, [])
 
   useEffect(() => {
-    if (activeTab === 'ticket') {
-      void loadTicket(ticketSearch)
-    } else if (activeTab === 'simulation') {
-      void loadSimulationState()
-    } else if (activeTab === 'overview') {
-      if (!matchingSummary) {
-        void loadMatching()
-      }
-      if (!reconSummary) {
-        void loadRecon()
-      }
-      if (settlements.length === 0) {
-        void loadSettlements()
-      }
-      if (passengerWalkthroughs.length === 0) {
-        void loadPassengerWalkthroughs()
-      }
-    } else if (activeTab === 'passenger') {
-      void loadPassengerWalkthroughs()
-    } else if (activeTab === 'matching') {
-      void loadMatching()
-    } else if (activeTab === 'recon') {
-      void loadRecon()
-    } else if (activeTab === 'audit') {
-      void loadAudit(auditTicket)
-    } else if (activeTab === 'orchestrator') {
-      void loadDags()
-    } else if (activeTab === 'settlements') {
-      void loadSettlements()
+    if (activeTab !== 'operations' || operationsLoaded) {
+      return
     }
-  }, [activeTab])
+    setGlobalLoading(true)
+    setError(null)
+    void loadOperationsData()
+      .then(() => setOperationsLoaded(true))
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'unknown error')
+      })
+      .finally(() => setGlobalLoading(false))
+  }, [activeTab, operationsLoaded])
 
   function onTicketSubmit(event: FormEvent) {
     event.preventDefault()
@@ -510,164 +418,52 @@ function App() {
     void loadAudit(auditTicket)
   }
 
+  function previousOperation() {
+    setSelectedOperationIndex((current) => Math.max(0, current - 1))
+  }
+
+  function nextOperation() {
+    const maxIndex = (simulationState?.operations.length ?? 1) - 1
+    setSelectedOperationIndex((current) => Math.min(maxIndex, current + 1))
+  }
+
+  const operationCount = simulationState?.operations.length ?? 0
+
   return (
-    <main className="page-shell">
-      <section className="hero">
-        <p className="eyebrow">FlightLedger Phase 2</p>
-        <h1>Revenue Accounting Platform</h1>
-        <p className="hero-copy">Event sourcing, matching, reconciliation, lineage, orchestration, and settlements.</p>
-        <button className="refresh-btn" onClick={() => void loadOverview(true)} disabled={loading}>
-          {loading ? 'Refreshing...' : 'Refresh Ingestion'}
+    <div className="app-shell">
+      <header className="top-bar">
+        <div className="brand-block">
+          <h1>Flight Ledger</h1>
+          <p>Airline Revenue Accounting Platform</p>
+        </div>
+        <button className="refresh-button" onClick={() => void refreshAll()} disabled={globalLoading || simulationLoading}>
+          {globalLoading ? 'Refreshing...' : 'Refresh Data'}
         </button>
-      </section>
+      </header>
 
-      {error && <section className="panel error-panel">API error: {error}</section>}
-
-      <section className="tabbar">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            className={`tab ${activeTab === tab.key ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
+      <nav className="main-nav">
+        {mainTabs.map((tab) => (
+          <button key={tab.key} className={`main-tab ${activeTab === tab.key ? 'active' : ''}`} onClick={() => setActiveTab(tab.key)}>
             {tab.label}
           </button>
         ))}
-      </section>
+      </nav>
 
-      {activeTab === 'overview' && dashboard && (
-        <section className="dashboard-grid">
-          <article className="panel stats-panel">
-            <h2>Pipeline Snapshot</h2>
-            <div className="stat-list">
-              <div>
-                <span>Topics</span>
-                <strong>{dashboard.total_topics}</strong>
-              </div>
-              <div>
-                <span>Events</span>
-                <strong>{dashboard.total_events}</strong>
-              </div>
-              <div>
-                <span>Bus</span>
-                <strong>{dashboard.bus_backend}</strong>
-              </div>
-              <div>
-                <span>Storage</span>
-                <strong>{dashboard.storage_backend}</strong>
-              </div>
-              <div>
-                <span>Channels</span>
-                <strong>{dashboard.total_channels}</strong>
-              </div>
-            </div>
-          </article>
+      {error && <section className="error-banner">API error: {error}</section>}
 
-          <article className="panel channels-panel">
-            <h2>Source Channels</h2>
-            <div className="channels-layout">
-              <div className="channel-list">
-                {dashboard.channels.map((channel) => (
-                  <button
-                    key={channel.channel_id}
-                    className={`channel-row ${selectedChannelId === channel.channel_id ? 'active' : ''}`}
-                    onClick={() => setSelectedChannelId(channel.channel_id)}
-                  >
-                    <span>{channel.name}</span>
-                    <small>
-                      {channel.protocol} | {channel.format} | {channel.record_count}
-                    </small>
-                  </button>
-                ))}
-              </div>
-              <div className="channel-detail">
-                <pre>{selectedChannel?.raw_payload}</pre>
-              </div>
-            </div>
-          </article>
+      {activeTab === 'visualisation' && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Monte Carlo Simulation Walkthrough</h2>
+            <p>Click through every processing step to see exactly how a ticket is transformed and stored.</p>
+          </div>
 
-          <article className="panel intuition-panel">
-            <h2>Process Intuition</h2>
-            <div className="intuition-grid">
-              <div className="intuition-card">
-                <h3>1. Ingestion</h3>
-                <p>
-                  {dashboard.total_channels} channels produced {dashboard.total_events} canonical events for this run.
-                </p>
-              </div>
-              <div className="intuition-card">
-                <h3>2. Lifecycle Store</h3>
-                <p>
-                  {scenarioStats.passengerCount} passengers and {scenarioStats.ticketCount} tickets across {scenarioStats.flightCount} flights were replayed into current ticket states.
-                </p>
-              </div>
-              <div className="intuition-card">
-                <h3>3. Coupon Matching</h3>
-                <p>
-                  {matchingSummary
-                    ? `${matchingSummary.matched} matched, ${matchingSummary.unmatched_issued} unmatched issued, ${matchingSummary.unmatched_flown} unmatched flown.`
-                    : 'Open Coupon Matching for detailed status.'}
-                </p>
-              </div>
-              <div className="intuition-card">
-                <h3>4. Reconciliation</h3>
-                <p>
-                  {reconSummary
-                    ? `${reconSummary.total_matched} matched and ${reconSummary.total_breaks} breaks classified for follow-up.`
-                    : 'Open Reconciliation to classify breaks by type and severity.'}
-                </p>
-              </div>
-              <div className="intuition-card">
-                <h3>5. Settlement Saga</h3>
-                <p>{settlements.length} settlement records progressed through calculate, validate, submit, confirm, and reconcile/compensate.</p>
-              </div>
-            </div>
-          </article>
-
-          <article className="panel topics-panel">
-            <h2>Topic Throughput</h2>
-            <div className="topics-list">
-              {Object.entries(dashboard.topics).map(([topic, item]) => (
-                <button key={topic} className={`topic-row ${selectedTopic === topic ? 'active' : ''}`} onClick={() => setSelectedTopic(topic)}>
-                  <span>{topic}</span>
-                  <strong>{item.count}</strong>
-                </button>
-              ))}
-            </div>
-          </article>
-
-          <article className="panel events-panel">
-            <h2>{selectedTopic}</h2>
-            <div className="events-list">
-              {selectedTopicEvents.slice(0, 40).map((event) => (
-                <div key={event.event_id} className="event-card">
-                  <header>
-                    <span className="event-type">{event.event_type}</span>
-                    <time>{new Date(event.occurred_at).toLocaleString()}</time>
-                  </header>
-                  <p>
-                    {event.ticket_number} | coupon {event.coupon_number ?? '-'} | {event.origin ?? '---'} to{' '}
-                    {event.destination ?? '---'}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-      )}
-
-      {activeTab === 'simulation' && (
-        <section className="panel tab-panel simulation-panel">
-          <h2>Interactive Simulation (Phase 0 and 1)</h2>
-          <p className="tab-copy">
-            Generate a random flight and 3-5 tickets, then process booking ingestion through adapter, bus, event store, and CQRS read model.
-          </p>
-          <div className="simulation-controls">
-            <button onClick={() => void generateSimulationFlight()} disabled={simulationLoading || (simulationState?.phase_index ?? -1) >= 0}>
+          <div className="control-row">
+            <button onClick={() => void generateFlight()} disabled={simulationLoading || (simulationState?.phase_index ?? -1) >= 0}>
               Generate Flight
             </button>
             <button
-              onClick={() => void processSimulationBookings()}
+              onClick={() => void processBookings()}
               disabled={simulationLoading || (simulationState?.phase_index ?? -1) < 0 || (simulationState?.phase_index ?? -1) >= 1}
             >
               Process Bookings
@@ -677,331 +473,273 @@ function App() {
             </button>
           </div>
 
-          <div className="simulation-header">
+          <div className="simulation-summary">
             <div>
-              <strong>Flight</strong>
-              <p>
+              <span>Flight</span>
+              <strong>
                 {simulationState?.flight
                   ? `${simulationState.flight.flight_number} ${simulationState.flight.origin}->${simulationState.flight.destination}`
                   : 'Not generated yet'}
-              </p>
+              </strong>
             </div>
             <div>
-              <strong>Phase</strong>
-              <p>{simulationState?.phase_name ?? 'idle'}</p>
+              <span>Phase</span>
+              <strong>{simulationState?.phase_name ?? 'idle'}</strong>
             </div>
             <div>
-              <strong>Simulated Time</strong>
-              <p>{simulationState?.simulated_time ? new Date(simulationState.simulated_time).toLocaleString() : '-'}</p>
+              <span>Simulated Time</span>
+              <strong>{simulationState?.simulated_time ? new Date(simulationState.simulated_time).toLocaleString() : '-'}</strong>
+            </div>
+            <div>
+              <span>Revenue</span>
+              <strong>GBP {(simulationState?.metrics.gross_revenue ?? 0).toFixed(2)}</strong>
             </div>
           </div>
 
-          <div className="simulation-layout">
-            <article className="sim-column">
-              <h3>Pipeline</h3>
-              <div className="sim-pipeline-list">
-                {simulationPipeline.map((component) => (
-                  <div key={component} className={`sim-pipeline-node ${simulationActiveComponent === component ? 'active' : ''}`}>
-                    {component}
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="sim-column">
-              <h3>Generated Tickets</h3>
-              <div className="sim-ticket-list">
-                {(simulationState?.tickets ?? []).map((ticket) => (
-                  <div key={ticket.ticket_number} className="sim-ticket-card">
-                    <strong>{ticket.passenger_name}</strong>
-                    <p>
-                      {ticket.ticket_number} | {ticket.pnr} | {ticket.source_system} ({ticket.source_vendor})
-                    </p>
-                    <p>
-                      {ticket.cabin_class} | {ticket.currency} {ticket.internal_total_amount.toFixed(2)}
-                    </p>
-                    <p>
-                      coupons: {ticket.legs.length} | discrepancy: {ticket.currency} {ticket.discrepancy_amount.toFixed(2)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="sim-column">
-              <h3>Live Metrics</h3>
-              <div className="sim-metric-list">
-                <p>tickets generated: {simulationState?.metrics.tickets_generated ?? 0}</p>
-                <p>coupons generated: {simulationState?.metrics.coupons_generated ?? 0}</p>
-                <p>potential breaks: {simulationState?.metrics.potential_breaks ?? 0}</p>
-                <p>gross revenue: GBP {(simulationState?.metrics.gross_revenue ?? 0).toFixed(2)}</p>
-                <p>bookings processed: {simulationState?.metrics.bookings_processed ?? 0}</p>
-                <p>events appended: {simulationState?.metrics.events_appended ?? 0}</p>
-              </div>
-            </article>
-          </div>
-
-          <h3 className="sim-subtitle">Event Stream</h3>
-          <div className="events-list sim-events">
-            {(simulationState?.operations ?? []).slice(-60).map((operation) => (
-              <div key={operation.id} className="event-card">
-                <header>
-                  <span className="event-type">{operation.title}</span>
-                  <time>{new Date(operation.timestamp).toLocaleTimeString()}</time>
-                </header>
-                <p>{operation.message}</p>
-                <pre>{JSON.stringify(operation.snippet, null, 2)}</pre>
+          <div className="pipeline-strip">
+            {pipelineNodes.map((node) => (
+              <div
+                key={node.key}
+                className={`pipeline-node ${selectedOperation?.component === node.key ? 'active' : ''}`}
+              >
+                {node.label}
               </div>
             ))}
           </div>
 
-          <h3 className="sim-subtitle">Database Snapshot</h3>
+          <div className="visual-grid">
+            <article className="card">
+              <h3>Generated Tickets</h3>
+              <div className="ticket-list">
+                {(simulationState?.tickets ?? []).map((ticket) => (
+                  <div key={ticket.ticket_number} className="ticket-card">
+                    <strong>{ticket.passenger_name}</strong>
+                    <p>
+                      {ticket.ticket_number} | {ticket.pnr}
+                    </p>
+                    <p>
+                      {ticket.source_system} via {ticket.source_vendor}
+                    </p>
+                    <p>
+                      {ticket.currency} {ticket.internal_total_amount.toFixed(2)} | legs {ticket.legs.length}
+                    </p>
+                    <p>
+                      discrepancy {ticket.currency} {ticket.discrepancy_amount.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="card">
+              <h3>Step Timeline ({operationCount})</h3>
+              <div className="timeline-list">
+                {(simulationState?.operations ?? []).map((operation, index) => (
+                  <button
+                    key={operation.id}
+                    className={`timeline-row ${index === selectedOperationIndex ? 'active' : ''}`}
+                    onClick={() => setSelectedOperationIndex(index)}
+                  >
+                    <span>{index + 1}</span>
+                    <div>
+                      <strong>{operation.title}</strong>
+                      <small>{operation.message}</small>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </article>
+
+            <article className="card">
+              <h3>Selected Step Explanation</h3>
+              {selectedOperation ? (
+                <>
+                  <p className="explain">{selectedOperationNarrative}</p>
+                  <p className="step-meta">
+                    {selectedOperation.title} | {new Date(selectedOperation.timestamp).toLocaleTimeString()}
+                  </p>
+                  <pre>{JSON.stringify(selectedOperation.snippet, null, 2)}</pre>
+                  <div className="step-nav">
+                    <button onClick={previousOperation} disabled={selectedOperationIndex <= 0}>
+                      Previous
+                    </button>
+                    <button onClick={nextOperation} disabled={selectedOperationIndex >= operationCount - 1}>
+                      Next
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="explain">Run Generate Flight to begin.</p>
+              )}
+            </article>
+          </div>
+
+          <h3 className="subhead">Database Snapshot</h3>
           <pre>{JSON.stringify(simulationState?.database ?? {}, null, 2)}</pre>
         </section>
       )}
 
       {activeTab === 'architecture' && (
-        <section className="panel tab-panel">
-          <h2>Architecture Diagram</h2>
-          <p className="tab-copy">
-            Scenario date: 2026-02-27. {scenarioStats.passengerCount || 6} passengers and {scenarioStats.issuedCount || 10} issued coupons across {scenarioStats.flightCount || 3} flights flow through adapters, event bus, lifecycle store, matching, reconciliation, settlement, and audit.
-          </p>
-          <svg className="arch-diagram" viewBox="0 0 1160 520" role="img" aria-label="FlightLedger architecture flow">
-            <rect x="30" y="40" width="220" height="90" rx="14" className="arch-node source" />
-            <text x="50" y="76" className="arch-title">Source Channels</text>
-            <text x="50" y="102" className="arch-text">PSS, DCS, GDS, OTA, Interline</text>
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Architecture</h2>
+            <p>
+              Canonical events flow from adapters into the message bus, then into event sourcing, CQRS projections, matching,
+              reconciliation, settlement saga, and audit lineage.
+            </p>
+          </div>
+          <div className="architecture-metrics">
+            <div>
+              <span>Passengers</span>
+              <strong>{scenarioStats.passengers}</strong>
+            </div>
+            <div>
+              <span>Tickets</span>
+              <strong>{scenarioStats.tickets}</strong>
+            </div>
+            <div>
+              <span>Flights</span>
+              <strong>{scenarioStats.flights}</strong>
+            </div>
+            <div>
+              <span>Total Events</span>
+              <strong>{scenarioStats.events}</strong>
+            </div>
+          </div>
 
-            <rect x="300" y="40" width="200" height="90" rx="14" className="arch-node adapter" />
-            <text x="320" y="76" className="arch-title">Adapters</text>
-            <text x="320" y="102" className="arch-text">Normalize to CanonicalEvent</text>
+          <svg className="architecture-diagram" viewBox="0 0 1160 520" role="img" aria-label="FlightLedger architecture flow">
+            <rect x="30" y="40" width="220" height="90" rx="12" className="node source" />
+            <text x="48" y="76" className="node-title">Source Channels</text>
+            <text x="48" y="101" className="node-text">PSS, DCS, GDS, OTA, Interline</text>
 
-            <rect x="550" y="40" width="200" height="90" rx="14" className="arch-node bus" />
-            <text x="570" y="76" className="arch-title">Message Bus</text>
-            <text x="570" y="102" className="arch-text">{dashboard?.bus_backend ?? 'memory'} topics by ticket</text>
+            <rect x="300" y="40" width="190" height="90" rx="12" className="node adapter" />
+            <text x="318" y="76" className="node-title">Adapters</text>
+            <text x="318" y="101" className="node-text">Normalize to canonical events</text>
 
-            <rect x="800" y="40" width="320" height="90" rx="14" className="arch-node store" />
-            <text x="820" y="76" className="arch-title">Ticket Lifecycle Store (Event Sourcing)</text>
-            <text x="820" y="102" className="arch-text">Append-only history + CQRS current-state view</text>
+            <rect x="540" y="40" width="190" height="90" rx="12" className="node bus" />
+            <text x="558" y="76" className="node-title">Message Bus</text>
+            <text x="558" y="101" className="node-text">{dashboard?.bus_backend ?? 'memory'} topics</text>
 
-            <rect x="120" y="210" width="280" height="90" rx="14" className="arch-node matcher" />
-            <text x="140" y="246" className="arch-title">Coupon Matching Engine</text>
-            <text x="140" y="272" className="arch-text">Issued vs flown, suspense aging</text>
+            <rect x="780" y="40" width="340" height="90" rx="12" className="node store" />
+            <text x="798" y="76" className="node-title">Ticket Lifecycle Store</text>
+            <text x="798" y="101" className="node-text">Event sourcing + CQRS projection</text>
 
-            <rect x="440" y="210" width="280" height="90" rx="14" className="arch-node recon" />
-            <text x="460" y="246" className="arch-title">Reconciliation Engine</text>
-            <text x="460" y="272" className="arch-text">3-way match + break classification</text>
+            <rect x="110" y="210" width="290" height="90" rx="12" className="node matcher" />
+            <text x="130" y="246" className="node-title">Coupon Matching</text>
+            <text x="130" y="271" className="node-text">Issued vs flown by ticket/coupon</text>
 
-            <rect x="760" y="210" width="280" height="90" rx="14" className="arch-node settle" />
-            <text x="780" y="246" className="arch-title">Settlement Saga Engine</text>
-            <text x="780" y="272" className="arch-text">Calculate -&gt; validate -&gt; submit -&gt; confirm</text>
+            <rect x="440" y="210" width="290" height="90" rx="12" className="node recon" />
+            <text x="460" y="246" className="node-title">Reconciliation</text>
+            <text x="460" y="271" className="node-text">3-way compare + break classification</text>
 
-            <rect x="120" y="370" width="300" height="90" rx="14" className="arch-node audit" />
-            <text x="140" y="406" className="arch-title">Audit & Lineage</text>
-            <text x="140" y="432" className="arch-text">Immutable trace per ticket/output</text>
+            <rect x="770" y="210" width="290" height="90" rx="12" className="node settlement" />
+            <text x="790" y="246" className="node-title">Settlement Saga</text>
+            <text x="790" y="271" className="node-text">calculate -&gt; validate -&gt; submit -&gt; confirm</text>
 
-            <rect x="460" y="370" width="300" height="90" rx="14" className="arch-node dag" />
-            <text x="480" y="406" className="arch-title">DAG Orchestrator</text>
-            <text x="480" y="432" className="arch-text">Month-end dependency execution</text>
+            <rect x="120" y="370" width="300" height="90" rx="12" className="node audit" />
+            <text x="140" y="406" className="node-title">Audit & Lineage</text>
+            <text x="140" y="431" className="node-text">Immutable trace for every action</text>
 
-            <rect x="800" y="370" width="280" height="90" rx="14" className="arch-node ui" />
-            <text x="820" y="406" className="arch-title">API + Dashboard</text>
-            <text x="820" y="432" className="arch-text">Operational views and drill-down</text>
+            <rect x="460" y="370" width="300" height="90" rx="12" className="node orchestrator" />
+            <text x="480" y="406" className="node-title">DAG Orchestrator</text>
+            <text x="480" y="431" className="node-text">Month-end dependency workflow</text>
 
-            <line x1="250" y1="85" x2="300" y2="85" className="arch-link" />
-            <line x1="500" y1="85" x2="550" y2="85" className="arch-link" />
-            <line x1="750" y1="85" x2="800" y2="85" className="arch-link" />
-            <line x1="960" y1="130" x2="260" y2="210" className="arch-link" />
-            <line x1="960" y1="130" x2="580" y2="210" className="arch-link" />
-            <line x1="960" y1="130" x2="900" y2="210" className="arch-link" />
+            <rect x="800" y="370" width="280" height="90" rx="12" className="node api" />
+            <text x="820" y="406" className="node-title">API + UI</text>
+            <text x="820" y="431" className="node-text">Operational and educational views</text>
+
+            <line x1="250" y1="86" x2="300" y2="86" className="arch-link" />
+            <line x1="490" y1="86" x2="540" y2="86" className="arch-link" />
+            <line x1="730" y1="86" x2="780" y2="86" className="arch-link" />
+            <line x1="948" y1="130" x2="255" y2="210" className="arch-link" />
+            <line x1="948" y1="130" x2="585" y2="210" className="arch-link" />
+            <line x1="948" y1="130" x2="915" y2="210" className="arch-link" />
             <line x1="260" y1="300" x2="260" y2="370" className="arch-link" />
-            <line x1="580" y1="300" x2="610" y2="370" className="arch-link" />
-            <line x1="900" y1="300" x2="940" y2="370" className="arch-link" />
+            <line x1="585" y1="300" x2="610" y2="370" className="arch-link" />
+            <line x1="915" y1="300" x2="940" y2="370" className="arch-link" />
           </svg>
         </section>
       )}
 
-      {activeTab === 'passenger' && (
-        <section className="panel tab-panel">
-          <h2>Passenger Flows</h2>
-          <p className="tab-copy">
-            One-day walkthrough on 2026-02-27 for 6 passengers across LHR-SFO, LHR-JFK, and JFK-SFO.
-          </p>
-          <button className="refresh-btn small" onClick={() => void loadPassengerWalkthroughs()}>
-            Refresh Passenger Flows
-          </button>
-          <div className="events-list passenger-list">
-            {passengerWalkthroughs.map((flow) => (
-              <article key={flow.passenger_name} className="event-card passenger-card">
-                <header>
-                  <strong>{flow.passenger_name}</strong>
-                  <span>{flow.tickets.join(', ')}</span>
-                </header>
-                <p className="event-meta">
-                  Channels: {flow.sales_channels.join(', ')} | {flow.narrative}
-                </p>
-                <div className="purchase-summary">
-                  <h3>What They Bought</h3>
-                  {flow.purchase_summary.map((purchase) => (
-                    <p key={purchase.ticket_number}>
-                      {purchase.ticket_number} ({purchase.pnr ?? '-'}) via {purchase.sales_channel}: {purchase.coupons} coupon(s),{' '}
-                      {purchase.currency ?? '-'} {purchase.total_paid !== null ? purchase.total_paid.toFixed(2) : '-'} for {purchase.journey}
-                    </p>
-                  ))}
-                </div>
-                <div className="legs-grid">
-                  {flow.itinerary.map((leg) => (
-                    <div key={`${leg.ticket_number}-${leg.coupon_number}`} className="leg-card">
-                      <strong>
-                        {leg.origin} to {leg.destination}
-                      </strong>
-                      <p>
-                        {leg.flight_number} | coupon {leg.coupon_number} | {leg.marketing_carrier}/{leg.operating_carrier}
-                      </p>
-                      <p>
-                        {leg.currency} {leg.gross_amount?.toFixed(2)} | {leg.sales_channel}
-                      </p>
-                      <p>
-                        matching: {leg.match_status} | recon: {leg.recon_status}
-                        {leg.recon_break_type ? ` (${leg.recon_break_type})` : ''}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <div className="step-grid">
-                  <div className="step-card">
-                    <h3>Ingestion</h3>
-                    <p>{flow.steps.ingestion.issued_coupons} issued coupons ingested.</p>
-                  </div>
-                  <div className="step-card">
-                    <h3>Matching</h3>
-                    <p>
-                      {flow.steps.matching.matched} matched, {flow.steps.matching.unmatched_issued} unmatched issued,{' '}
-                      {flow.steps.matching.unmatched_flown} unmatched flown.
-                    </p>
-                  </div>
-                  <div className="step-card">
-                    <h3>Reconciliation</h3>
-                    <p>
-                      {flow.steps.reconciliation.matched} matched, {flow.steps.reconciliation.breaks} breaks.
-                    </p>
-                  </div>
-                  <div className="step-card">
-                    <h3>Settlement & Audit</h3>
-                    <p>
-                      {flow.steps.settlement.total} settlement items, {flow.steps.audit.records} audit records.
-                    </p>
-                  </div>
-                </div>
-                <div className="meaning-block">
-                  <h3>What The Results Mean</h3>
-                  {flow.result_meaning.map((line, idx) => (
-                    <p key={`${flow.passenger_name}-meaning-${idx}`}>{line}</p>
-                  ))}
-                </div>
-              </article>
-            ))}
+      {activeTab === 'operations' && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Operations</h2>
+            <p>Passenger outcomes, matching, reconciliation, settlements, and direct ticket/audit lookups.</p>
           </div>
-        </section>
-      )}
 
-      {activeTab === 'ticket' && (
-        <section className="panel tab-panel">
-          <h2>Ticket Explorer</h2>
-          <form className="inline-form" onSubmit={onTicketSubmit}>
-            <input value={ticketSearch} onChange={(event) => setTicketSearch(event.target.value)} />
-            <button type="submit">Search</button>
-          </form>
-          {ticketDetail && (
-            <>
-              <pre>{JSON.stringify(ticketDetail.state, null, 2)}</pre>
-              <div className="events-list">
-                {ticketDetail.history.map((event) => (
-                  <div key={event.event_id} className="event-card">
-                    <strong>{event.event_type}</strong> at {new Date(event.occurred_at).toLocaleString()}
+          <div className="ops-stats">
+            <div>
+              <span>Matched Coupons</span>
+              <strong>{matchingSummary?.matched ?? 0}</strong>
+            </div>
+            <div>
+              <span>Unresolved Breaks</span>
+              <strong>{reconSummary?.total_breaks ?? 0}</strong>
+            </div>
+            <div>
+              <span>Settlements</span>
+              <strong>{settlements.length}</strong>
+            </div>
+            <div>
+              <span>Passenger Flows</span>
+              <strong>{passengerWalkthroughs.length}</strong>
+            </div>
+          </div>
+
+          <div className="ops-grid">
+            <article className="card">
+              <h3>Passenger Outcomes</h3>
+              <div className="passenger-list">
+                {passengerWalkthroughs.map((flow) => (
+                  <div key={flow.passenger_name} className="passenger-card">
+                    <strong>{flow.passenger_name}</strong>
+                    <p>{flow.narrative}</p>
+                    {flow.purchase_summary.map((purchase) => (
+                      <p key={purchase.ticket_number}>
+                        {purchase.ticket_number} via {purchase.sales_channel}, {purchase.currency} {purchase.total_paid?.toFixed(2)}
+                      </p>
+                    ))}
                   </div>
                 ))}
               </div>
-            </>
-          )}
-        </section>
-      )}
+            </article>
 
-      {activeTab === 'matching' && (
-        <section className="panel tab-panel">
-          <h2>Coupon Matching</h2>
-          <button className="refresh-btn small" onClick={() => void loadMatching()}>
-            Refresh Matching
-          </button>
-          <pre>{JSON.stringify(matchingSummary, null, 2)}</pre>
-          <h3>Suspense Items</h3>
-          <pre>{JSON.stringify(suspenseItems.slice(0, 30), null, 2)}</pre>
-        </section>
-      )}
-
-      {activeTab === 'recon' && (
-        <section className="panel tab-panel">
-          <h2>Reconciliation</h2>
-          <button className="refresh-btn small" onClick={() => void loadRecon()}>
-            Refresh Reconciliation
-          </button>
-          <pre>{JSON.stringify(reconSummary, null, 2)}</pre>
-          <div className="events-list">
-            {reconBreaks.slice(0, 30).map((item) => (
-              <div key={item.id} className="event-card">
-                <strong>{item.ticket_number}</strong> | {item.break_type ?? 'none'} | {item.severity}
-                <button className="resolve-btn" onClick={() => void resolveBreak(item.id)}>
-                  Resolve
-                </button>
+            <article className="card">
+              <h3>Break Queue</h3>
+              <div className="break-list">
+                {reconBreaks.slice(0, 20).map((item) => (
+                  <div key={item.id} className="break-row">
+                    <strong>{item.ticket_number}</strong>
+                    <p>
+                      {item.break_type ?? 'unknown'} | {item.severity} | diff {item.difference ?? 0}
+                    </p>
+                  </div>
+                ))}
               </div>
-            ))}
+              <h4>Settlement Status</h4>
+              <pre>{JSON.stringify(settlementStatusCounts, null, 2)}</pre>
+            </article>
+
+            <article className="card">
+              <h3>Lookup Tools</h3>
+              <form className="inline-form" onSubmit={onTicketSubmit}>
+                <input value={ticketSearch} onChange={(event) => setTicketSearch(event.target.value)} />
+                <button type="submit">Ticket</button>
+              </form>
+              <form className="inline-form" onSubmit={onAuditSubmit}>
+                <input value={auditTicket} onChange={(event) => setAuditTicket(event.target.value)} />
+                <button type="submit">Audit</button>
+              </form>
+              <h4>Ticket State</h4>
+              <pre>{JSON.stringify(ticketDetail?.state ?? {}, null, 2)}</pre>
+              <h4>Audit History</h4>
+              <pre>{JSON.stringify(auditHistory.slice(0, 20), null, 2)}</pre>
+            </article>
           </div>
         </section>
       )}
-
-      {activeTab === 'audit' && (
-        <section className="panel tab-panel">
-          <h2>Audit & Lineage</h2>
-          <form className="inline-form" onSubmit={onAuditSubmit}>
-            <input value={auditTicket} onChange={(event) => setAuditTicket(event.target.value)} />
-            <button type="submit">Load Lineage</button>
-          </form>
-          <pre>{JSON.stringify(auditHistory.slice(0, 80), null, 2)}</pre>
-        </section>
-      )}
-
-      {activeTab === 'orchestrator' && (
-        <section className="panel tab-panel">
-          <h2>Orchestrator</h2>
-          <div className="events-list">
-            {dags.map((dag) => (
-              <div key={dag.name} className="event-card">
-                <strong>{dag.name}</strong>
-                <p>{dag.tasks.map((task) => task.name).join(' -> ')}</p>
-                <button onClick={() => void runDag(dag.name)}>Run DAG</button>
-              </div>
-            ))}
-          </div>
-          <h3>Last Run</h3>
-          <pre>{JSON.stringify(selectedRun, null, 2)}</pre>
-        </section>
-      )}
-
-      {activeTab === 'settlements' && (
-        <section className="panel tab-panel">
-          <h2>Settlements</h2>
-          <div className="events-list">
-            {settlements.slice(0, 40).map((item) => (
-              <div key={item.id} className="event-card">
-                <strong>{item.ticket_number}</strong> | {item.counterparty} | {item.status}
-                <button onClick={() => void loadSettlementSaga(item.id)}>Saga</button>
-              </div>
-            ))}
-          </div>
-          <h3>Saga Log</h3>
-          <pre>{JSON.stringify(selectedSettlementSaga, null, 2)}</pre>
-        </section>
-      )}
-    </main>
+    </div>
   )
 }
 
