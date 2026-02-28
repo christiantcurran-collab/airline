@@ -42,6 +42,10 @@ class ResolveBreakRequest(BaseModel):
     notes: str
 
 
+class GenerateSimulationRequest(BaseModel):
+    seed: int | None = None
+
+
 def build_dashboard_payload() -> dict[str, Any]:
     return runtime.dashboard_payload(refresh=False)
 
@@ -136,3 +140,27 @@ def get_settlement_saga(settlement_id: str) -> list[dict[str, Any]]:
 @app.get("/api/walkthroughs")
 def get_passenger_walkthroughs() -> list[dict[str, Any]]:
     return runtime.passenger_walkthroughs()
+
+
+@app.get("/api/simulation/state")
+def get_simulation_state() -> dict[str, Any]:
+    return runtime.simulation_state()
+
+
+@app.post("/api/simulation/generate-flight")
+def generate_simulation_flight(payload: GenerateSimulationRequest | None = None) -> dict[str, Any]:
+    seed = payload.seed if payload else None
+    return runtime.simulation_generate_flight(seed=seed)
+
+
+@app.post("/api/simulation/process-bookings")
+def process_simulation_bookings() -> dict[str, Any]:
+    try:
+        return runtime.simulation_process_bookings()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/simulation/reset")
+def reset_simulation() -> dict[str, Any]:
+    return runtime.simulation_reset()

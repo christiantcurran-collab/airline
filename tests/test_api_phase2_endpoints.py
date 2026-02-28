@@ -65,3 +65,18 @@ def test_phase2_endpoints_smoke() -> None:
     assert len(walkthrough_rows) == 6
     assert "purchase_summary" in walkthrough_rows[0]
     assert "result_meaning" in walkthrough_rows[0]
+
+    simulation_state = client.get("/api/simulation/state")
+    assert simulation_state.status_code == 200
+
+    generated = client.post("/api/simulation/generate-flight")
+    assert generated.status_code == 200
+    assert generated.json()["phase_index"] >= 0
+
+    processed = client.post("/api/simulation/process-bookings")
+    assert processed.status_code == 200
+    assert processed.json()["phase_index"] >= 1
+
+    reset = client.post("/api/simulation/reset")
+    assert reset.status_code == 200
+    assert reset.json()["phase_index"] == -1

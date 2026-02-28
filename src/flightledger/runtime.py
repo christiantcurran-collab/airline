@@ -18,6 +18,7 @@ from flightledger.models.canonical import CanonicalEventType
 from flightledger.orchestrator.dag import DAG, DAGRunner, Task
 from flightledger.pipeline import SOURCE_CHANNELS, SourceChannel, ingest_demo
 from flightledger.recon.reconciliation import ReconciliationEngine, ReconSummary
+from flightledger.simulation import FlightSimulationEngine
 from flightledger.settlement.engine import SettlementEngine
 from flightledger.stores.ticket_lifecycle import TicketLifecycleStore, TicketState
 
@@ -34,6 +35,7 @@ class FlightLedgerRuntime:
         self.matcher = CouponMatcher(self.ticket_store)
         self.recon = ReconciliationEngine(self.ticket_store, self.matcher)
         self.settlement = SettlementEngine(audit_store=self.audit)
+        self.simulation = FlightSimulationEngine(ticket_store=self.ticket_store, audit_store=self.audit)
         self.dag_run_repo = DagRunRepository()
         self.task_run_repo = TaskRunRepository()
         self._last_bus = None
@@ -194,6 +196,22 @@ class FlightLedgerRuntime:
     def settlement_saga(self, settlement_id: str) -> list[dict[str, Any]]:
         self.ensure_seeded()
         return self.settlement.get_saga(settlement_id)
+
+    def simulation_state(self) -> dict[str, Any]:
+        self.ensure_seeded()
+        return self.simulation.get_state()
+
+    def simulation_generate_flight(self, seed: int | None = None) -> dict[str, Any]:
+        self.ensure_seeded()
+        return self.simulation.generate_flight(seed=seed)
+
+    def simulation_process_bookings(self) -> dict[str, Any]:
+        self.ensure_seeded()
+        return self.simulation.process_bookings()
+
+    def simulation_reset(self) -> dict[str, Any]:
+        self.ensure_seeded()
+        return self.simulation.reset()
 
     def passenger_walkthroughs(self) -> list[dict[str, Any]]:
         self.ensure_seeded()

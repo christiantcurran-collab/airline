@@ -299,6 +299,133 @@
   font-size: 0.78rem;
 }
 
+.simulation-panel {
+  margin-top: 1rem;
+}
+
+.simulation-controls {
+  display: flex;
+  gap: 0.55rem;
+  padding: 0 1rem 0.9rem;
+}
+
+.simulation-controls button {
+  border: 1px solid #d0dcea;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+
+.simulation-header {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  padding: 0 1rem 0.9rem;
+}
+
+.simulation-header div {
+  border: 1px solid #deebf6;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.55rem;
+}
+
+.simulation-header strong {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.simulation-header p {
+  margin: 0.32rem 0 0;
+  color: var(--ink-soft);
+}
+
+.simulation-layout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  padding: 0 1rem 1rem;
+}
+
+.sim-column {
+  border: 1px solid #deebf6;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.65rem;
+}
+
+.sim-column h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.98rem;
+}
+
+.sim-pipeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.sim-pipeline-node {
+  border: 1px solid #d9e6f3;
+  border-radius: 9px;
+  padding: 0.45rem 0.52rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.sim-pipeline-node.active {
+  border-color: var(--accent);
+  background: #fff4ee;
+  color: var(--accent-strong);
+}
+
+.sim-ticket-list {
+  max-height: 240px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.sim-ticket-card {
+  border: 1px solid #deebf6;
+  border-radius: 9px;
+  padding: 0.48rem;
+  background: #fcfeff;
+}
+
+.sim-ticket-card p {
+  margin: 0.3rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+}
+
+.sim-metric-list p {
+  margin: 0.3rem 0;
+  color: var(--ink-soft);
+}
+
+.sim-subtitle {
+  margin: 0 1rem 0.6rem;
+  font-size: 1rem;
+}
+
+.sim-events {
+  max-height: 340px;
+}
+
+.sim-events pre {
+  margin: 0.45rem 0 0;
+  border: 1px solid #deebf6;
+  border-radius: 8px;
+  padding: 0.45rem;
+  background: #fcfeff;
+}
+
 .inline-form {
   display: flex;
   gap: 0.55rem;
@@ -565,7 +692,9 @@
   }
 
   .legs-grid,
-  .step-grid {
+  .step-grid,
+  .simulation-header,
+  .simulation-layout {
     grid-template-columns: 1fr;
   }
 }

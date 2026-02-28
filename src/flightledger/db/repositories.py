@@ -160,6 +160,14 @@ class TicketEventRepository(_BaseRepository):
         response = self.client.table("ticket_events").select("*").execute()
         return response.data or []
 
+    def delete_by_ticket_prefix(self, prefix: str) -> None:
+        if self.backend == StorageBackend.MEMORY:
+            for ticket_number in list(_MEMORY_STATE.ticket_events.keys()):
+                if ticket_number.startswith(prefix):
+                    del _MEMORY_STATE.ticket_events[ticket_number]
+            return
+        self.client.table("ticket_events").delete().like("ticket_number", f"{prefix}%").execute()
+
 
 class TicketCurrentStateRepository(_BaseRepository):
     def reset(self) -> None:
@@ -186,6 +194,20 @@ class TicketCurrentStateRepository(_BaseRepository):
         )
         rows = response.data or []
         return rows[0] if rows else None
+
+    def all_rows(self) -> list[dict[str, Any]]:
+        if self.backend == StorageBackend.MEMORY:
+            return list(_MEMORY_STATE.ticket_current_state.values())
+        response = self.client.table("ticket_current_state").select("*").execute()
+        return response.data or []
+
+    def delete_by_ticket_prefix(self, prefix: str) -> None:
+        if self.backend == StorageBackend.MEMORY:
+            for ticket_number in list(_MEMORY_STATE.ticket_current_state.keys()):
+                if ticket_number.startswith(prefix):
+                    del _MEMORY_STATE.ticket_current_state[ticket_number]
+            return
+        self.client.table("ticket_current_state").delete().like("ticket_number", f"{prefix}%").execute()
 
 
 class CouponMatchRepository(_BaseRepository):
@@ -306,6 +328,12 @@ class AuditRepository(_BaseRepository):
         )
         return response.data or []
 
+    def all_rows(self) -> list[dict[str, Any]]:
+        if self.backend == StorageBackend.MEMORY:
+            return list(_MEMORY_STATE.audit_log)
+        response = self.client.table("audit_log").select("*").execute()
+        return response.data or []
+
 
 class DagRunRepository(_BaseRepository):
     def insert(self, row: dict[str, Any]) -> dict[str, Any]:
@@ -419,4 +447,3 @@ class SettlementRepository(_BaseRepository):
 
 def reset_memory_backend() -> None:
     _MEMORY_STATE.reset()
-

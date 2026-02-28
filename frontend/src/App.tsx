@@ -116,6 +116,69 @@ type SettlementSaga = {
   timestamp: string
 }
 
+type SimulationOperation = {
+  id: string
+  timestamp: string
+  phase: string
+  component: string
+  title: string
+  message: string
+  snippet: Record<string, unknown>
+}
+
+type SimulationTicket = {
+  ticket_number: string
+  pnr: string
+  passenger_name: string
+  source_system: string
+  source_vendor: string
+  cabin_class: string
+  currency: string
+  internal_total_amount: number
+  external_reported_amount: number
+  discrepancy_amount: number
+  legs: {
+    coupon_number: number
+    flight_number: string
+    marketing_carrier: string
+    operating_carrier: string
+    origin: string
+    destination: string
+    flight_date: string
+    internal_amount: number
+  }[]
+}
+
+type SimulationState = {
+  simulation_id: string
+  simulated_time: string
+  flight: {
+    carrier: string
+    flight_number: string
+    origin: string
+    destination: string
+    departure_time: string
+  } | null
+  phase_index: number
+  phase_name: string
+  phase_status: Record<string, string>
+  tickets: SimulationTicket[]
+  operations: SimulationOperation[]
+  metrics: {
+    tickets_generated: number
+    coupons_generated: number
+    potential_breaks: number
+    gross_revenue: number
+    bookings_processed: number
+    events_appended: number
+  }
+  database: {
+    tables: Record<string, { rows: number; simulation_rows: number }>
+    simulation_source_breakdown: Record<string, number>
+    sample_events: { ticket_number: string; event_type: string; event_sequence: number }[]
+  }
+}
+
 type PassengerWalkthrough = {
   passenger_name: string
   tickets: string[]
@@ -184,6 +247,7 @@ type PassengerWalkthrough = {
 
 type TabKey =
   | 'overview'
+  | 'simulation'
   | 'architecture'
   | 'passenger'
   | 'ticket'
@@ -195,6 +259,7 @@ type TabKey =
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
+  { key: 'simulation', label: 'Simulation' },
   { key: 'architecture', label: 'Architecture' },
   { key: 'passenger', label: 'Passenger Flows' },
   { key: 'ticket', label: 'Ticket Explorer' },
@@ -224,6 +289,8 @@ function App() {
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null)
   const [selectedChannelId, setSelectedChannelId] = useState<string>('')
   const [selectedTopic, setSelectedTopic] = useState<string>('')
+  const [simulationState, setSimulationState] = useState<SimulationState | null>(null)
+  const [simulationLoading, setSimulationLoading] = useState(false)
   const [passengerWalkthroughs, setPassengerWalkthroughs] = useState<PassengerWalkthrough[]>([])
 
   const [ticketSearch, setTicketSearch] = useState('125000100001')
@@ -253,6 +320,9 @@ function App() {
     () => (dashboard && selectedTopic ? dashboard.topics[selectedTopic]?.events ?? [] : []),
     [dashboard, selectedTopic]
   )
+
+  const simulationPipeline = ['monte_carlo', 'adapter', 'bus', 'event_store', 'cqrs_read_model']
+  const simulationActiveComponent = simulationState?.operations.at(-1)?.component ?? ''
 
   const scenarioStats = useMemo(() => {
     if (!dashboard) {
@@ -353,6 +423,46 @@ function App() {
     setPassengerWalkthroughs(await fetchJson<PassengerWalkthrough[]>('/api/walkthroughs'))
   }
 
+  async function loadSimulationState() {
+    setSimulationState(await fetchJson<SimulationState>('/api/simulation/state'))
+  }
+
+  async function generateSimulationFlight() {
+    setSimulationLoading(true)
+    setError(null)
+    try {
+      setSimulationState(await fetchJson<SimulationState>('/api/simulation/generate-flight', { method: 'POST' }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'unknown error')
+    } finally {
+      setSimulationLoading(false)
+    }
+  }
+
+  async function processSimulationBookings() {
+    setSimulationLoading(true)
+    setError(null)
+    try {
+      setSimulationState(await fetchJson<SimulationState>('/api/simulation/process-bookings', { method: 'POST' }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'unknown error')
+    } finally {
+      setSimulationLoading(false)
+    }
+  }
+
+  async function resetSimulation() {
+    setSimulationLoading(true)
+    setError(null)
+    try {
+      setSimulationState(await fetchJson<SimulationState>('/api/simulation/reset', { method: 'POST' }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'unknown error')
+    } finally {
+      setSimulationLoading(false)
+    }
+  }
+
   useEffect(() => {
     void loadOverview()
   }, [])
@@ -360,6 +470,8 @@ function App() {
   useEffect(() => {
     if (activeTab === 'ticket') {
       void loadTicket(ticketSearch)
+    } else if (activeTab === 'simulation') {
+      void loadSimulationState()
     } else if (activeTab === 'overview') {
       if (!matchingSummary) {
         void loadMatching()
@@ -541,6 +653,110 @@ function App() {
               ))}
             </div>
           </article>
+        </section>
+      )}
+
+      {activeTab === 'simulation' && (
+        <section className="panel tab-panel simulation-panel">
+          <h2>Interactive Simulation (Phase 0 and 1)</h2>
+          <p className="tab-copy">
+            Generate a random flight and 3-5 tickets, then process booking ingestion through adapter, bus, event store, and CQRS read model.
+          </p>
+          <div className="simulation-controls">
+            <button onClick={() => void generateSimulationFlight()} disabled={simulationLoading || (simulationState?.phase_index ?? -1) >= 0}>
+              Generate Flight
+            </button>
+            <button
+              onClick={() => void processSimulationBookings()}
+              disabled={simulationLoading || (simulationState?.phase_index ?? -1) < 0 || (simulationState?.phase_index ?? -1) >= 1}
+            >
+              Process Bookings
+            </button>
+            <button onClick={() => void resetSimulation()} disabled={simulationLoading}>
+              Reset Simulation
+            </button>
+          </div>
+
+          <div className="simulation-header">
+            <div>
+              <strong>Flight</strong>
+              <p>
+                {simulationState?.flight
+                  ? `${simulationState.flight.flight_number} ${simulationState.flight.origin}->${simulationState.flight.destination}`
+                  : 'Not generated yet'}
+              </p>
+            </div>
+            <div>
+              <strong>Phase</strong>
+              <p>{simulationState?.phase_name ?? 'idle'}</p>
+            </div>
+            <div>
+              <strong>Simulated Time</strong>
+              <p>{simulationState?.simulated_time ? new Date(simulationState.simulated_time).toLocaleString() : '-'}</p>
+            </div>
+          </div>
+
+          <div className="simulation-layout">
+            <article className="sim-column">
+              <h3>Pipeline</h3>
+              <div className="sim-pipeline-list">
+                {simulationPipeline.map((component) => (
+                  <div key={component} className={`sim-pipeline-node ${simulationActiveComponent === component ? 'active' : ''}`}>
+                    {component}
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="sim-column">
+              <h3>Generated Tickets</h3>
+              <div className="sim-ticket-list">
+                {(simulationState?.tickets ?? []).map((ticket) => (
+                  <div key={ticket.ticket_number} className="sim-ticket-card">
+                    <strong>{ticket.passenger_name}</strong>
+                    <p>
+                      {ticket.ticket_number} | {ticket.pnr} | {ticket.source_system} ({ticket.source_vendor})
+                    </p>
+                    <p>
+                      {ticket.cabin_class} | {ticket.currency} {ticket.internal_total_amount.toFixed(2)}
+                    </p>
+                    <p>
+                      coupons: {ticket.legs.length} | discrepancy: {ticket.currency} {ticket.discrepancy_amount.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="sim-column">
+              <h3>Live Metrics</h3>
+              <div className="sim-metric-list">
+                <p>tickets generated: {simulationState?.metrics.tickets_generated ?? 0}</p>
+                <p>coupons generated: {simulationState?.metrics.coupons_generated ?? 0}</p>
+                <p>potential breaks: {simulationState?.metrics.potential_breaks ?? 0}</p>
+                <p>gross revenue: GBP {(simulationState?.metrics.gross_revenue ?? 0).toFixed(2)}</p>
+                <p>bookings processed: {simulationState?.metrics.bookings_processed ?? 0}</p>
+                <p>events appended: {simulationState?.metrics.events_appended ?? 0}</p>
+              </div>
+            </article>
+          </div>
+
+          <h3 className="sim-subtitle">Event Stream</h3>
+          <div className="events-list sim-events">
+            {(simulationState?.operations ?? []).slice(-60).map((operation) => (
+              <div key={operation.id} className="event-card">
+                <header>
+                  <span className="event-type">{operation.title}</span>
+                  <time>{new Date(operation.timestamp).toLocaleTimeString()}</time>
+                </header>
+                <p>{operation.message}</p>
+                <pre>{JSON.stringify(operation.snippet, null, 2)}</pre>
+              </div>
+            ))}
+          </div>
+
+          <h3 className="sim-subtitle">Database Snapshot</h3>
+          <pre>{JSON.stringify(simulationState?.database ?? {}, null, 2)}</pre>
         </section>
       )}
 
